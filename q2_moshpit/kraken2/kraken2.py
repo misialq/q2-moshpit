@@ -9,13 +9,10 @@ import os
 import re
 import subprocess
 import tempfile
-import time
 from copy import deepcopy
 from functools import reduce
 
-import numpy as np
 import pandas as pd
-import requests
 
 from q2_moshpit._utils import _process_common_input_params, run_command
 from q2_types_genomics.per_sample_data import MultiMAGSequencesDirFmt
@@ -24,7 +21,9 @@ from q2_sapienns._metaphlan import metaphlan_taxon
 from q2_moshpit.kraken2.utils import _process_kraken2_arg
 
 
-def _parse_kraken2_report(report_fp: str, sample_name: str, bin_name: str) -> pd.DataFrame:
+def _parse_kraken2_report(
+        report_fp: str, sample_name: str, bin_name: str
+) -> pd.DataFrame:
     with open(report_fp, 'r') as r:
         lines = r.readlines()
 
@@ -35,29 +34,6 @@ def _parse_kraken2_report(report_fp: str, sample_name: str, bin_name: str) -> pd
         all_taxonomies[taxonomy] = {f'{sample_name}/{bin_name}': count}
 
     return pd.DataFrame.from_dict(all_taxonomies, orient='index')
-
-
-def _fetch_tax_id(taxon: str) -> int:
-    taxon = taxon.replace('[', '').replace(']', '')
-    params = {
-        'db': 'taxonomy',
-        'term': f'{taxon}[Scientific Name]',
-        'retmode': 'json',
-        'retmax': 100,
-        'retstart': 0
-    }
-
-    response = requests.get(
-        url='https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi',
-        params=params,
-    )
-    result = response.json()['esearchresult']['idlist']
-    time.sleep(0.4)
-    if len(result) == 1:
-        return result[0]
-    else:
-        print('More than one result was found for %s', taxon)
-        return min([int(x) for x in result])
 
 
 def _process_kraken2_reports(reports: dict) -> pd.DataFrame:
@@ -93,15 +69,12 @@ def _process_kraken2_reports(reports: dict) -> pd.DataFrame:
         for level in taxonomy.split('|'):
             all_levels.append(level) if level not in all_levels else False
 
-    # fetch IDs from NCBI
-    # levels_with_ids = {
-    #     level: _fetch_tax_id(level.split('__')[-1]) for level in all_levels
-    # }
     levels_with_ids = {
         level: _id for _id, level in enumerate(sorted(all_levels))
     }
 
-    # assign NCBI IDs
+    # TODO: how should this really be done?
+    # assign fake NCBI IDs
     all_taxonomies = []
     for taxonomy in df_merged.index:
         _id = list(map(lambda x: str(levels_with_ids[x]), taxonomy.split('|')))
@@ -126,17 +99,6 @@ def _parse_kraken2_output(
     df.drop('split_tax_id', axis=1, inplace=True)
     df.set_index('id', drop=True, inplace=True)
     return df
-
-
-def _process_kraken2_outputs(reports: dict) -> pd.DataFrame:
-    contig_info_all = []
-    for _sample, bins in reports.items():
-        for _bin, _reports in bins.items():
-            contig_info = _parse_kraken2_output(
-                _reports['output'], _sample, _bin
-            )
-            contig_info_all.append(contig_info)
-    return pd.concat(contig_info_all, axis=0)
 
 
 def _classify_kraken(manifest, common_args) -> (pd.DataFrame, pd.DataFrame):
@@ -168,9 +130,6 @@ def _classify_kraken(manifest, common_args) -> (pd.DataFrame, pd.DataFrame):
                 "stdout and stderr to learn more."
             )
         results_df = _process_kraken2_reports(kraken2_reports)
-        #contigs_to_taxons = _process_kraken2_outputs(kraken2_reports)
-
-        #grouped = contigs_to_taxons.groupby(['sample', 'taxon']).sum()
 
         # TODO: make the level configurable?
         (table, taxonomy) = metaphlan_taxon(
