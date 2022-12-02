@@ -110,7 +110,7 @@ plugin.methods.register_function(
         ('taxonomy', FeatureData[Taxonomy])
     ],
     input_descriptions={
-        "seqs": "Sequences to be classified. Both, single-/paired-end reads"
+        "seqs": "Sequences to be classified. Both, single-/paired-end reads "
                 "and assembled MAGs, can be provided."
     },
     parameter_descriptions={
