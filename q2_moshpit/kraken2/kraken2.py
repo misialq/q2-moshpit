@@ -11,10 +11,14 @@ import subprocess
 import tempfile
 from copy import deepcopy
 from functools import reduce
+from typing import Union
 
 import pandas as pd
+from q2_types.per_sample_sequences import SingleLanePerSampleSingleEndFastqDirFmt, \
+    SingleLanePerSamplePairedEndFastqDirFmt
 
 from q2_moshpit._utils import _process_common_input_params, run_command
+from q2_types_genomics.kraken2 import Kraken2ReportDirectoryFormat
 from q2_types_genomics.per_sample_data import MultiMAGSequencesDirFmt
 from q2_sapienns._metaphlan import metaphlan_taxon
 
@@ -101,23 +105,38 @@ def _parse_kraken2_output(
     return df
 
 
-def _classify_kraken(manifest, common_args) -> (pd.DataFrame, pd.DataFrame):
+def _classify_kraken(manifest, common_args) -> (
+        pd.DataFrame, pd.DataFrame
+):
     base_cmd = ["kraken2", *common_args]
+    base_cmd.append('--paired') if 'reverse' in manifest.columns else False
+
     kraken2_reports = {}
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         try:
-            for (_sample, _bin), fn in manifest.itertuples():
+            for index, row in manifest.iterrows():
+                if 'filename' in manifest.columns:
+                    _sample, _bin, fn = index[0], index[1], [row['filename']]
+                elif 'reverse' in manifest.columns:
+                    _sample, _bin, fn = index, index, row.tolist()
+                else:
+                    _sample, _bin, fn = index, index, [row['forward']]
                 if _sample not in kraken2_reports:
                     kraken2_reports[_sample] = {}
+
+                sample_dir = os.path.join(tmp_dir, _sample)
+                os.makedirs(sample_dir, exist_ok=True)
+                report_fp = os.path.join(sample_dir, f'{_bin}.report.txt')
+                output_fp = os.path.join(sample_dir, f'{_bin}.output.txt')
+
                 cmd = deepcopy(base_cmd)
-                bin_dir = os.path.join(tmp_dir, _sample, _bin)
-                os.makedirs(bin_dir, exist_ok=True)
-                report_fp = os.path.join(bin_dir, 'report.txt')
-                output_fp = os.path.join(bin_dir, 'output.txt')
                 cmd.extend([
-                    '--use-mpa-style', '--report', report_fp, '--use-names',
-                    '--output', output_fp, fn
+                    '--use-mpa-style',
+                    '--report', report_fp,
+                    '--use-names',
+                    '--output', output_fp,
+                    *fn
                 ])
                 run_command(cmd=cmd, verbose=True)
                 kraken2_reports[_sample].update(
@@ -129,6 +148,7 @@ def _classify_kraken(manifest, common_args) -> (pd.DataFrame, pd.DataFrame):
                 f"(return code {e.returncode}), please inspect "
                 "stdout and stderr to learn more."
             )
+
         results_df = _process_kraken2_reports(kraken2_reports)
 
         # TODO: make the level configurable?
@@ -141,7 +161,11 @@ def _classify_kraken(manifest, common_args) -> (pd.DataFrame, pd.DataFrame):
 
 
 def classify_kraken(
-        seqs: MultiMAGSequencesDirFmt, db: str, threads: int = 1,
+        seqs: Union[
+            SingleLanePerSamplePairedEndFastqDirFmt,
+            SingleLanePerSampleSingleEndFastqDirFmt,
+            MultiMAGSequencesDirFmt
+        ], db: str, threads: int = 1,
         confidence: float = 0.0, minimum_base_quality: int = 0,
         memory_mapping: bool = False, minimum_hit_groups: int = 2,
         quick: bool = False

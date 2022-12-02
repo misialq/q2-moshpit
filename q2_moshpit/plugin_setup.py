@@ -7,6 +7,9 @@
 # ----------------------------------------------------------------------------
 from q2_types.feature_data import FeatureData, Taxonomy
 from q2_types.feature_table import Frequency, FeatureTable
+from q2_types.per_sample_sequences import (
+    SequencesWithQuality, PairedEndSequencesWithQuality
+)
 from q2_types.sample_data import SampleData
 
 from q2_types_genomics.per_sample_data import MAGs, Contigs
@@ -89,7 +92,9 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.kraken2.classify_kraken,
     inputs={
-        "seqs": SampleData[MAGs]
+        "seqs": SampleData[
+            SequencesWithQuality | PairedEndSequencesWithQuality | MAGs
+            ]
     },
     parameters={
         'db': Str,
@@ -105,7 +110,8 @@ plugin.methods.register_function(
         ('taxonomy', FeatureData[Taxonomy])
     ],
     input_descriptions={
-        "seqs": "Sequences to be classified."
+        "seqs": "Sequences to be classified. Both, single-/paired-end reads"
+                "and assembled MAGs, can be provided."
     },
     parameter_descriptions={
         'db': 'Path to the Kraken 2 database.',
