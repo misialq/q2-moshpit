@@ -30,8 +30,28 @@ def collate_kraken2_outputs(kraken2_outputs: Kraken2OutputDirectoryFormat) \
     return collated_kraken2_outputs
 
 
+# def _collate_kraken_tsvs(kraken2_results, kraken_type, output):
+#     collated_sample_outputs = {}
+#
+#     for kraken2_result in kraken2_results:
+#         for fp in kraken2_result.path.iterdir():
+#             # fp basename will be "sample_id.{output/report}.{txt/tsv}" we just
+#             # want the id
+#             sample_id = os.path.basename(fp).split('.')[0]
+#             df = pd.read_csv(fp, sep='\t', header=None)
+#
+#             if sample_id in collated_sample_outputs:
+#                 collated_sample_outputs[sample_id].append(
+#                     df, ignore_index=True)
+#             else:
+#                 collated_sample_outputs[sample_id] = df
+#
+#     for sample_id, df in collated_sample_outputs.items():
+#         df.to_csv(output.path / f'{sample_id}.{kraken_type}.txt', sep='\t',
+#                   index=False, header=False)
+
 def _collate_kraken_tsvs(kraken2_results, kraken_type, output):
-    collated_sample_outputs = {}
+    samples = []
 
     for kraken2_result in kraken2_results:
         for fp in kraken2_result.path.iterdir():
@@ -40,12 +60,13 @@ def _collate_kraken_tsvs(kraken2_results, kraken_type, output):
             sample_id = os.path.basename(fp).split('.')[0]
             df = pd.read_csv(fp, sep='\t', header=None)
 
-            if sample_id in collated_sample_outputs:
-                collated_sample_outputs[sample_id].append(
-                    df, ignore_index=True)
+            if sample_id in samples:
+                print(
+                    f"Sample ID '{sample_id}' already exists "
+                    f"in the collated output."
+                )
             else:
-                collated_sample_outputs[sample_id] = df
-
-    for sample_id, df in collated_sample_outputs.items():
-        df.to_csv(output.path / f'{sample_id}.{kraken_type}.txt', sep='\t',
-                  index=False, header=False)
+                df.to_csv(
+                    output.path / f'{sample_id}.{kraken_type}.txt',
+                    sep='\t', index=False, header=False
+                )

@@ -95,9 +95,10 @@ def classify_kraken2(
                 seq, kraken2_db, **kwargs)
         kraken2_reports.append(kraken2_report)
         kraken2_outputs.append(kraken2_output)
-
+    print("-----------------COLLATING-----------------")
     (collated_kraken2_reports,) = collate_kraken2_reports(kraken2_reports)
     (collated_kraken2_outputs,) = collate_kraken2_outputs(kraken2_outputs)
+    print("-----------------COLLATING DONE-----------------")
 
     return collated_kraken2_reports, collated_kraken2_outputs
 
