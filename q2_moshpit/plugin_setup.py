@@ -1135,3 +1135,31 @@ plugin.methods.register_function(
                 "classification of NGS reads.",
     citations=[citations["menzel2016"]],
 )
+
+plugin.pipelines.register_function(
+    function=q2_moshpit.abundance.estimate_abundance,
+    inputs={
+        "reads": SampleData[
+            SequencesWithQuality | PairedEndSequencesWithQuality
+            ],
+        "mags": FeatureData[MAG],
+    },
+    parameters={},
+    outputs=[
+        ("abundances", FeatureTable[Frequency]),
+    ],
+    input_descriptions={
+        "reads": "Original reads to be used for abundance estimation.",
+        "mags": "MAGs for which the abundance in every sample should "
+                "be estimated.",
+    },
+    parameter_descriptions={},
+    output_descriptions={
+        "abundances": "MAG abundances.",
+    },
+    name="Estimate MAG abundance.",
+    description="This method estimates MAG abundances by mapping the "
+                "reads to MAGs and calculating respective metric values"
+                "which are then used as a proxy for the frequency.",
+    citations=[],
+)
