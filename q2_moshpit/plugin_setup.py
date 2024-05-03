@@ -13,7 +13,7 @@ from q2_types.feature_data import (
 )
 from q2_types.feature_table import FeatureTable, Frequency, PresenceAbsence
 from q2_types.per_sample_sequences import (
-    SequencesWithQuality, PairedEndSequencesWithQuality, MAGs, Contigs
+    SequencesWithQuality, PairedEndSequencesWithQuality, MAGs, Contigs, SingleBowtie2Index
 )
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
@@ -1143,6 +1143,7 @@ plugin.pipelines.register_function(
             SequencesWithQuality | PairedEndSequencesWithQuality
             ],
         "mags": FeatureData[MAG],
+        "map": FeatureData[AlignmentMap],
     },
     parameters={},
     outputs=[
@@ -1150,8 +1151,9 @@ plugin.pipelines.register_function(
     ],
     input_descriptions={
         "reads": "Original reads to be used for abundance estimation.",
-        "mags": "MAGs for which the abundance in every sample should "
-                "be estimated.",
+        "mags": "MAGs for which the abundance should be estimated.",
+        "map": "Bowtie2 index of all the MAGs for which the "
+                        "abundance in every sample should be estimated.",
     },
     parameter_descriptions={},
     output_descriptions={
