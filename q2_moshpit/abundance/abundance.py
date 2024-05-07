@@ -8,6 +8,7 @@
 import glob
 import os
 import tempfile
+from typing import Union
 
 import qiime2
 import skbio.io
@@ -20,7 +21,8 @@ from q2_assembly._utils import run_commands_with_pipe
 from q2_moshpit._utils import run_command
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
-    MultiBowtie2IndexDirFmt, CasavaOneEightSingleLanePerSampleDirFmt, BAMDirFmt
+    MultiBowtie2IndexDirFmt, CasavaOneEightSingleLanePerSampleDirFmt, BAMDirFmt,
+    SingleLanePerSamplePairedEndFastqDirFmt, SingleLanePerSampleSingleEndFastqDirFmt
 )
 
 
@@ -29,71 +31,119 @@ def get_mag_length(fasta_file):
     return sum(len(seq) for seq in sequences)
 
 
-def estimate_abundance(
-        ctx,
-        reads,
-        mags,
-        map,
-):
-    # TODO: implement single- and paired-end case
-    maps = map.view(BAMDirFmt)
-    r = reads.view(CasavaOneEightSingleLanePerSampleDirFmt)
-    m = mags.view(MAGSequencesDirFmt)
+def rpkm(
+        df: pd.DataFrame,
+        length_col: str = "length",
+        read_counts_col: str = "numreads",
+) -> pd.Series:
+    df['rpk'] = df[read_counts_col] / (df[length_col] / 10**3)
+    reads_per_sample = df.groupby("sample_id")[read_counts_col].sum()
+    return df['rpk'] * 10**6 / df["sample_id"].map(reads_per_sample)
 
-    # get read counts per sample
-    _tabulate_counts = ctx.get_action("demux", "tabulate_read_counts")
-    counts, = _tabulate_counts([reads])
-    counts_df = counts.view(qiime2.Metadata).to_dataframe()
+
+def tpm(
+        df: pd.DataFrame,
+        length_col: str = "length",
+        read_counts_col: str = "numreads",
+) -> pd.Series:
+    df['rpk'] = df[read_counts_col] / df[length_col] / 10**3
+    rpk_per_sample = df.groupby("sample_id")['rpk'].sum()
+    return df['rpk'] / df["sample_id"].map(rpk_per_sample) * 10**6
+
+
+def _merge_frames(
+        coverage_df: pd.DataFrame, lengths_df: pd.DataFrame
+) -> pd.DataFrame:
+    coverage_summed = coverage_df.groupby(["sample_id", "mag_id"]).sum().reset_index(drop=False)
+    coverage_summed = coverage_summed.merge(lengths_df, left_on="mag_id", right_index=True)
+    return coverage_summed
+
+
+def _calculate_coverage(
+        sample_fp: str, sample_id: str, temp_dir: str
+) -> pd.DataFrame:
+    """
+    Calculate the coverage of a sample.
+
+    This function sorts the sample file using samtools, calculates the
+    coverage, and then reads the coverage file into a DataFrame.
+
+    Args:
+        sample_fp (str): The file path of the sample.
+        sample_id (str): The ID of the sample.
+        temp_dir (str): The directory to store temporary files.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the coverage information.
+    """
+    sample_dir = os.path.join(temp_dir, sample_id)
+    output_fp = os.path.join(str(temp_dir), f"{sample_id}.bam")
+    coverage_fp = os.path.join(str(temp_dir), f"{sample_id}.coverage.tsv")
+
+    os.makedirs(sample_dir)
+
+    # sort the BAM file
+    run_command(
+        ["samtools", "sort", "-o", output_fp, sample_fp], verbose=True
+    )
+
+    # calculate the coverage
+    run_command(
+        ["samtools", "coverage", "-o", coverage_fp, output_fp], verbose=True
+    )
+
+    df = pd.read_csv(coverage_fp, sep="\t", index_col=0)
+    df["sample_id"] = sample_id
+    df["mag_id"] = df.index.map(lambda x: x.split("_", maxsplit=1)[0])
+
+    return df
+
+
+def estimate_mag_abundance(
+        reads: Union[
+            SingleLanePerSamplePairedEndFastqDirFmt,
+            SingleLanePerSampleSingleEndFastqDirFmt,
+        ],
+        mags: MAGSequencesDirFmt,
+        maps: BAMDirFmt,
+        metric: str = "rpkm"
+) -> pd.DataFrame:
+    metric_func = {"rpkm": rpkm, "tpm": tpm}[metric]
 
     # calculate MAG lengths
     # TODO: replace by FeatureData[SequenceCharacteristics % length]
     lengths = {}
-    for mag_id, mag_fp in m.feature_dict().items():
+    for mag_id, mag_fp in mags.feature_dict().items():
         lengths[mag_id] = get_mag_length(mag_fp)
-    lengths_df = pd.DataFrame.from_dict(lengths, orient="index", columns=["length"])
+    lengths_df = pd.DataFrame.from_dict(
+        lengths, orient="index", columns=["length"]
+    )
 
     # get sample IDs from reads and BAMs
-    sample_ids = r.manifest.index.to_list()
+    sample_ids_reads = reads.manifest.view(pd.DataFrame).index.to_list()
     sample_ids_bam = {
         os.path.basename(x).split("_alignment")[0]: x for x
         in glob.glob(os.path.join(str(maps), "*.bam"))
     }
-    if set(sample_ids) != set(sample_ids_bam.keys()):
-        # TODO: add a better error message
+    if set(sample_ids_reads) != set(sample_ids_bam.keys()):
         raise ValueError("Sample IDs in reads and BAMs do not match.")
 
+    # calculate coverage for each sample
     with tempfile.TemporaryDirectory() as temp_dir:
-        report_dfs = []
+        dfs = []
         for sample_id, sample_fp in sample_ids_bam.items():
-            sample_dir = os.path.join(temp_dir, sample_id)
-            os.makedirs(sample_dir)
+            dfs.append(
+                _calculate_coverage(sample_fp, sample_id, temp_dir)
+            )
 
-            output_fp = os.path.join(str(temp_dir), f"{sample_id}.bam")
-            coverage_fp = os.path.join(str(temp_dir), f"{sample_id}.coverage.tsv")
+    coverage_df = pd.concat(dfs)
+    coverage_summed = _merge_frames(coverage_df, lengths_df)
+    coverage_summed["abundance"] = metric_func(coverage_summed)
 
-            cmd1 = [
-                "samtools", "sort", "-o", output_fp, sample_fp
-            ]
-            run_command(cmd1, verbose=True)
+    # transform into a feature table
+    feature_table = coverage_summed.pivot(
+        index='sample_id', columns='mag_id', values='abundance'
+    )
+    feature_table.index.name = "sample-id"
 
-            cmd3 = [
-                "samtools", "coverage", "-o", coverage_fp, output_fp
-            ]
-            run_command(cmd3, verbose=True)
-
-            df = pd.read_csv(coverage_fp, sep="\t", index_col=0)
-            df["sample_id"] = sample_id
-            df["mag_id"] = df.index.map(lambda x: x.split("_", maxsplit=1)[0])
-            report_dfs.append(df)
-
-        coverage_df = pd.concat(report_dfs)
-        coverage_summed = coverage_df.groupby(["sample_id", "mag_id"]).sum().reset_index(drop=False)
-        coverage_summed = coverage_summed.merge(lengths_df, left_on="mag_id", right_index=True)
-        coverage_summed = coverage_summed.merge(counts_df, left_on="sample_id", right_index=True)
-
-        coverage_summed["abundance"] = coverage_summed["numreads"] * 10**6 / (coverage_summed["Demultiplexed sequence count"] * coverage_summed["length"])
-
-    ft = coverage_summed.pivot(index='sample_id', columns='mag_id', values='abundance')
-    ft.index.name = "sample-id"
-
-    return Artifact.import_data("FeatureTable[Frequency]", ft)
+    return feature_table

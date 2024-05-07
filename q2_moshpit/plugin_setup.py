@@ -1136,26 +1136,30 @@ plugin.methods.register_function(
     citations=[citations["menzel2016"]],
 )
 
-plugin.pipelines.register_function(
-    function=q2_moshpit.abundance.estimate_abundance,
+plugin.methods.register_function(
+    function=q2_moshpit.abundance.estimate_mag_abundance,
     inputs={
         "reads": SampleData[
             SequencesWithQuality | PairedEndSequencesWithQuality
             ],
         "mags": FeatureData[MAG],
-        "map": FeatureData[AlignmentMap],
+        "maps": FeatureData[AlignmentMap],
     },
-    parameters={},
+    parameters={
+        "metric": Str % Choices(["rpkm", "tpm"])
+    },
     outputs=[
         ("abundances", FeatureTable[Frequency]),
     ],
     input_descriptions={
         "reads": "Original reads to be used for abundance estimation.",
         "mags": "MAGs for which the abundance should be estimated.",
-        "map": "Bowtie2 index of all the MAGs for which the "
-                        "abundance in every sample should be estimated.",
+        "maps": "Bowtie2 alignment maps between reads and MAGs for which "
+                "the abundance should be estimated.",
     },
-    parameter_descriptions={},
+    parameter_descriptions={
+        "metric": "Metric to be used as a proxy of MAG abundance."
+    },
     output_descriptions={
         "abundances": "MAG abundances.",
     },
