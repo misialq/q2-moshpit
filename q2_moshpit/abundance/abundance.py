@@ -10,23 +10,20 @@ import os
 import tempfile
 from typing import Union
 
-import qiime2
+import pandas as pd
 import skbio.io
 import skbio.sequence
 
-import pandas as pd
-from qiime2 import Artifact
-
-from q2_assembly._utils import run_commands_with_pipe
 from q2_moshpit._utils import run_command
 from q2_types.feature_data_mag import MAGSequencesDirFmt
 from q2_types.per_sample_sequences import (
-    MultiBowtie2IndexDirFmt, CasavaOneEightSingleLanePerSampleDirFmt, BAMDirFmt,
-    SingleLanePerSamplePairedEndFastqDirFmt, SingleLanePerSampleSingleEndFastqDirFmt
+    BAMDirFmt,
+    SingleLanePerSamplePairedEndFastqDirFmt,
+    SingleLanePerSampleSingleEndFastqDirFmt
 )
 
 
-def get_mag_length(fasta_file):
+def get_mag_length(fasta_file: str):
     sequences = skbio.io.read(fasta_file, format='fasta', into=skbio.DNA)
     return sum(len(seq) for seq in sequences)
 
@@ -54,8 +51,12 @@ def tpm(
 def _merge_frames(
         coverage_df: pd.DataFrame, lengths_df: pd.DataFrame
 ) -> pd.DataFrame:
-    coverage_summed = coverage_df.groupby(["sample_id", "mag_id"]).sum().reset_index(drop=False)
-    coverage_summed = coverage_summed.merge(lengths_df, left_on="mag_id", right_index=True)
+    coverage_summed = coverage_df.groupby(
+        ["sample_id", "mag_id"]
+    ).sum().reset_index(drop=False)
+    coverage_summed = coverage_summed.merge(
+        lengths_df, left_on="mag_id", right_index=True
+    )
     return coverage_summed
 
 
