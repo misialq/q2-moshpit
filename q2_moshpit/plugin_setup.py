@@ -106,7 +106,8 @@ plugin.methods.register_function(
         'num_threads': Int % Range(0, None),
         'seed': Int % Range(0, None),
         'debug': Bool,
-        'verbose': Bool
+        'verbose': Bool,
+        'bin_together': Bool
     },
     outputs=[
         ('mags', SampleData[MAGs]),
@@ -137,7 +138,8 @@ plugin.methods.register_function(
         'num_threads': 'Number of threads to use (0: use all cores).',
         'seed': 'For exact reproducibility. (0: use random seed)',
         'debug': 'Debug output.',
-        'verbose': 'Verbose output.'
+        'verbose': 'Verbose output.',
+        'bin_together': 'Perform binning using contigs from all the samples.'
     },
     output_descriptions={
         'mags': 'The resulting MAGs.',

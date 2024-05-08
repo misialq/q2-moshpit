@@ -59,11 +59,11 @@ def _sort_bams(samp_name, samp_props, loc):
     return new_props
 
 
-def _estimate_depth(samp_name, samp_props, loc):
+def _estimate_depth(samp_name, bam_fps, loc):
     depth_fp = os.path.join(str(loc), f'{samp_name}_depth.txt')
     run_command(
         ['jgi_summarize_bam_contig_depths', '--outputDepth',
-         depth_fp, samp_props['map']],
+         depth_fp, *bam_fps],
         verbose=True
     )
     return depth_fp
@@ -88,7 +88,7 @@ def _process_sample(
         props = _sort_bams(samp_name, samp_props, tmp)
 
         # calculate depth
-        depth_fp = _estimate_depth(samp_name, props, tmp)
+        depth_fp = _estimate_depth(samp_name, [props['map']], tmp)
 
         # run metabat2
         bins_dp = _run_metabat2(
@@ -135,14 +135,27 @@ def _generate_contig_map(
 def _bin_contigs_metabat(
     contigs: ContigSequencesDirFmt,
     alignment_maps: BAMDirFmt,
+    bin_together: bool,
     common_args: list
 ) -> (MultiFASTADirectoryFormat, dict, ContigSequencesDirFmt):
     sample_set = _assert_samples(contigs, alignment_maps)
 
     bins = MultiFASTADirectoryFormat()
     unbinned = ContigSequencesDirFmt()
-    for samp, props in sample_set.items():
-        _process_sample(samp, props, common_args, str(bins), str(unbinned))
+
+    if bin_together:
+        with tempfile.TemporaryDirectory() as tmp:
+            for samp, props in sample_set.items():
+                _sort_bams(samp, props, tmp)
+            _estimate_depth('all', [props['map']], tmp)
+            _run_metabat2(
+                samp_name, props, tmp, depth_fp, common_args
+            )
+    else:
+        for samp, props in sample_set.items():
+            _process_sample(
+                samp, props, common_args, str(bins), str(unbinned)
+            )
 
     if not glob.glob(os.path.join(str(bins), '*/*.fa')):
         raise ValueError(
@@ -160,16 +173,16 @@ def bin_contigs_metabat(
     max_edges: int = None, p_tnf: int = None, no_add: bool = None,
     min_cv: int = None, min_cv_sum: int = None, min_cls_size: int = None,
     num_threads: int = None, seed: int = None, debug: bool = None,
-    verbose: bool = None
+    verbose: bool = None, bin_together: bool = True
 ) -> (MultiFASTADirectoryFormat, dict, ContigSequencesDirFmt):
 
     kwargs = {k: v for k, v in locals().items()
-              if k not in ['contigs', 'alignment_maps']}
+              if k not in ['contigs', 'alignment_maps', 'bin_together']}
     common_args = _process_common_input_params(
         processing_func=_process_metabat2_arg, params=kwargs
     )
 
     return _bin_contigs_metabat(
         contigs=contigs, alignment_maps=alignment_maps,
-        common_args=common_args
+        bin_together=bin_together, common_args=common_args
     )
