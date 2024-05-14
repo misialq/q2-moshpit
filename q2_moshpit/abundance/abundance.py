@@ -105,20 +105,11 @@ def estimate_mag_abundance(
             SingleLanePerSamplePairedEndFastqDirFmt,
             SingleLanePerSampleSingleEndFastqDirFmt,
         ],
-        mags: MAGSequencesDirFmt,
+        mag_lengths: pd.DataFrame,
         maps: BAMDirFmt,
         metric: str = "rpkm"
 ) -> pd.DataFrame:
     metric_func = {"rpkm": rpkm, "tpm": tpm}[metric]
-
-    # calculate MAG lengths
-    # TODO: replace by FeatureData[SequenceCharacteristics % length]
-    lengths = {}
-    for mag_id, mag_fp in mags.feature_dict().items():
-        lengths[mag_id] = get_mag_length(mag_fp)
-    lengths_df = pd.DataFrame.from_dict(
-        lengths, orient="index", columns=["length"]
-    )
 
     # get sample IDs from reads and BAMs
     sample_ids_reads = reads.manifest.view(pd.DataFrame).index.to_list()
@@ -138,7 +129,7 @@ def estimate_mag_abundance(
             )
 
     coverage_df = pd.concat(dfs)
-    coverage_summed = _merge_frames(coverage_df, lengths_df)
+    coverage_summed = _merge_frames(coverage_df, mag_lengths)
     coverage_summed["abundance"] = metric_func(coverage_summed)
 
     # transform into a feature table

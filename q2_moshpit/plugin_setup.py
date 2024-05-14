@@ -9,7 +9,7 @@ import importlib
 
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.feature_data import (
-    FeatureData, Sequence, Taxonomy, ProteinSequence
+    FeatureData, Sequence, Taxonomy, ProteinSequence, SequenceCharacteristics
 )
 from q2_types.feature_table import FeatureTable, Frequency, PresenceAbsence
 from q2_types.per_sample_sequences import (
@@ -1142,7 +1142,8 @@ plugin.methods.register_function(
         "reads": SampleData[
             SequencesWithQuality | PairedEndSequencesWithQuality
             ],
-        "mags": FeatureData[MAG],
+        "mag_lengths":
+            FeatureData[SequenceCharacteristics % Properties("length")],
         "maps": FeatureData[AlignmentMap],
     },
     parameters={
@@ -1153,7 +1154,7 @@ plugin.methods.register_function(
     ],
     input_descriptions={
         "reads": "Original reads to be used for abundance estimation.",
-        "mags": "MAGs for which the abundance should be estimated.",
+        "mag_lengths": "Table containing length of every MAG.",
         "maps": "Bowtie2 alignment maps between reads and MAGs for which "
                 "the abundance should be estimated.",
     },
