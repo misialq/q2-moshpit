@@ -18,7 +18,8 @@ from q2_types.feature_data import (
 )
 from q2_types.feature_table import FeatureTable, Frequency, PresenceAbsence
 from q2_types.per_sample_sequences import (
-    SequencesWithQuality, PairedEndSequencesWithQuality, MAGs, Contigs
+    SequencesWithQuality, PairedEndSequencesWithQuality, MAGs, Contigs,
+    SingleBowtie2Index
 )
 from q2_types.sample_data import SampleData
 from q2_types.feature_map import FeatureMap, MAGtoContigs
@@ -1194,6 +1195,39 @@ plugin.methods.register_function(
     description="This method uses Kaiju to perform taxonomic "
                 "classification of NGS reads.",
     citations=[citations["menzel2016"]],
+)
+
+plugin.methods.register_function(
+    function=q2_moshpit.abundance.estimate_mag_abundance,
+    inputs={
+        "maps": FeatureData[AlignmentMap],
+        "mag_lengths":
+            FeatureData[SequenceCharacteristics % Properties("length")],
+    },
+    parameters={
+        "metric": Str % Choices(["rpkm", "tpm"]),
+        "threads": Int % Range(1, None),
+    },
+    outputs=[
+        ("abundances", FeatureTable[Frequency]),
+    ],
+    input_descriptions={
+        "maps": "Bowtie2 alignment maps between reads and MAGs for which "
+                "the abundance should be estimated.",
+        "mag_lengths": "Table containing length of every MAG.",
+    },
+    parameter_descriptions={
+        "metric": "Metric to be used as a proxy of MAG abundance.",
+        "threads": "Number of threads to pass to samtools."
+    },
+    output_descriptions={
+        "abundances": "MAG abundances.",
+    },
+    name="Estimate MAG abundance.",
+    description="This method estimates MAG abundances by mapping the "
+                "reads to MAGs and calculating respective metric values"
+                "which are then used as a proxy for the frequency.",
+    citations=[],
 )
 
 plugin.methods.register_function(
