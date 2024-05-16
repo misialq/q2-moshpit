@@ -87,7 +87,7 @@ def _calculate_coverage(
     # sort the BAM file
     run_command(
         ["samtools", "sort", "-o", output_fp,
-         "--threads", threads, sample_fp],
+         "--threads", str(threads), sample_fp],
         verbose=True
     )
 
