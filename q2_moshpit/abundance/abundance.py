@@ -61,7 +61,7 @@ def _merge_frames(
 
 
 def _calculate_coverage(
-        sample_fp: str, sample_id: str, temp_dir: str
+        sample_fp: str, sample_id: str, temp_dir: str, threads: int
 ) -> pd.DataFrame:
     """
     Calculate the coverage of a sample.
@@ -73,6 +73,7 @@ def _calculate_coverage(
         sample_fp (str): The file path of the sample.
         sample_id (str): The ID of the sample.
         temp_dir (str): The directory to store temporary files.
+        threads (int): The number of threads to use.
 
     Returns:
         pd.DataFrame: A DataFrame containing the coverage information.
@@ -85,7 +86,9 @@ def _calculate_coverage(
 
     # sort the BAM file
     run_command(
-        ["samtools", "sort", "-o", output_fp, sample_fp], verbose=True
+        ["samtools", "sort", "-o", output_fp,
+         "--threads", threads, sample_fp],
+        verbose=True
     )
 
     # calculate the coverage
@@ -101,31 +104,24 @@ def _calculate_coverage(
 
 
 def estimate_mag_abundance(
-        reads: Union[
-            SingleLanePerSamplePairedEndFastqDirFmt,
-            SingleLanePerSampleSingleEndFastqDirFmt,
-        ],
-        mag_lengths: pd.DataFrame,
         maps: BAMDirFmt,
-        metric: str = "rpkm"
+        mag_lengths: pd.DataFrame,
+        metric: str = "rpkm",
+        threads: int = 1,
 ) -> pd.DataFrame:
     metric_func = {"rpkm": rpkm, "tpm": tpm}[metric]
 
-    # get sample IDs from reads and BAMs
-    sample_ids_reads = reads.manifest.view(pd.DataFrame).index.to_list()
     sample_ids_bam = {
         os.path.basename(x).split("_alignment")[0]: x for x
         in glob.glob(os.path.join(str(maps), "*.bam"))
     }
-    if set(sample_ids_reads) != set(sample_ids_bam.keys()):
-        raise ValueError("Sample IDs in reads and BAMs do not match.")
 
     # calculate coverage for each sample
     with tempfile.TemporaryDirectory() as temp_dir:
         dfs = []
         for sample_id, sample_fp in sample_ids_bam.items():
             dfs.append(
-                _calculate_coverage(sample_fp, sample_id, temp_dir)
+                _calculate_coverage(sample_fp, sample_id, temp_dir, threads)
             )
 
     coverage_df = pd.concat(dfs)

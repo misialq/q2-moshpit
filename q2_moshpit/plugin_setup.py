@@ -1139,27 +1139,25 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.abundance.estimate_mag_abundance,
     inputs={
-        "reads": SampleData[
-            SequencesWithQuality | PairedEndSequencesWithQuality
-            ],
+        "maps": FeatureData[AlignmentMap],
         "mag_lengths":
             FeatureData[SequenceCharacteristics % Properties("length")],
-        "maps": FeatureData[AlignmentMap],
     },
     parameters={
-        "metric": Str % Choices(["rpkm", "tpm"])
+        "metric": Str % Choices(["rpkm", "tpm"]),
+        "threads": Int % Range(1, None),
     },
     outputs=[
         ("abundances", FeatureTable[Frequency]),
     ],
     input_descriptions={
-        "reads": "Original reads to be used for abundance estimation.",
-        "mag_lengths": "Table containing length of every MAG.",
         "maps": "Bowtie2 alignment maps between reads and MAGs for which "
                 "the abundance should be estimated.",
+        "mag_lengths": "Table containing length of every MAG.",
     },
     parameter_descriptions={
-        "metric": "Metric to be used as a proxy of MAG abundance."
+        "metric": "Metric to be used as a proxy of MAG abundance.",
+        "threads": "Number of threads to pass to samtools."
     },
     output_descriptions={
         "abundances": "MAG abundances.",
