@@ -8,7 +8,7 @@
 import glob
 import os
 import subprocess
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import qiime2.util
@@ -16,7 +16,7 @@ from qiime2.sdk import Context
 
 from q2_types.feature_data import FeatureData
 from q2_types.feature_data_mag import MAG, MAGSequencesDirFmt
-from q2_types.genome_data import SeedOrthologDirFmt, OrthologFileFmt
+from q2_types.genome_data import SeedOrthologDirFmt, OrthologFileFmt, GenomeSequencesDirectoryFormat
 from q2_types.per_sample_sequences import (
     Contigs, MAGs, ContigSequencesDirFmt, MultiMAGSequencesDirFmt
 )

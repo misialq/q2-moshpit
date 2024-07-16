@@ -651,11 +651,15 @@ plugin.methods.register_function(
     ]
 )
 
+I_eggnog_search, O_eggnog_search = TypeMap({
+    SampleData[Contigs]: SampleData[Orthologs],
+    SampleData[MAGs]: GenomeData[Orthologs],
+    FeatureData[MAG]: GenomeData[Orthologs]
+})
 plugin.pipelines.register_function(
     function=q2_moshpit.eggnog.eggnog_diamond_search,
     inputs={
-        'sequences':
-            SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
+        'sequences': I_eggnog_search,
         'diamond_db': ReferenceDB[Diamond],
     },
     parameters={
@@ -679,7 +683,7 @@ plugin.pipelines.register_function(
         **partition_param_descriptions
     },
     outputs=[
-        ('eggnog_hits', SampleData[Orthologs]),
+        ('eggnog_hits', O_eggnog_search),
         ('table', FeatureTable[Frequency])
     ],
     name='Run eggNOG search using diamond aligner',
@@ -695,7 +699,7 @@ plugin.pipelines.register_function(
 plugin.pipelines.register_function(
     function=q2_moshpit.eggnog.eggnog_hmmer_search,
     inputs={
-        'sequences': SampleData[Contigs | MAGs] | FeatureData[MAG],
+        'sequences': I_eggnog_search,
         'pressed_hmm_db': ProfileHMM[PressedProtein],
         'idmap': EggnogHmmerIdmap,
         'seed_alignments': GenomeData[Proteins]
@@ -723,7 +727,7 @@ plugin.pipelines.register_function(
         **partition_param_descriptions
     },
     outputs=[
-        ('eggnog_hits', SampleData[Orthologs]),
+        ('eggnog_hits', O_eggnog_search),
         ('table', FeatureTable[Frequency])
     ],
     name='Run eggNOG search using HMMER aligner',
@@ -738,8 +742,7 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.eggnog._eggnog_diamond_search,
     inputs={
-        'sequences':
-            SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
+        'sequences': I_eggnog_search,
         'diamond_db': ReferenceDB[Diamond]
     },
     parameters={
@@ -759,7 +762,7 @@ plugin.methods.register_function(
                         'machines with enough memory.',
     },
     outputs=[
-        ('eggnog_hits', SampleData[Orthologs]),
+        ('eggnog_hits', O_eggnog_search),
         ('table', FeatureTable[Frequency])
     ],
     output_descriptions={
@@ -781,8 +784,7 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.eggnog._eggnog_hmmer_search,
     inputs={
-        'sequences':
-            SampleData[Contigs] | SampleData[MAGs] | FeatureData[MAG],
+        'sequences': I_eggnog_search,
         'idmap': EggnogHmmerIdmap,
         'pressed_hmm_db': ProfileHMM[PressedProtein],
         'seed_alignments': GenomeData[Proteins]
@@ -809,7 +811,7 @@ plugin.methods.register_function(
                         'machines with enough memory.',
     },
     outputs=[
-        ('eggnog_hits', SampleData[Orthologs]),
+        ('eggnog_hits', O_eggnog_search),
         ('table', FeatureTable[Frequency])
     ],
     output_descriptions={
@@ -831,7 +833,7 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.eggnog._eggnog_feature_table,
     inputs={
-        'seed_orthologs': SampleData[Orthologs]
+        'seed_orthologs': SampleData[Orthologs] | GenomeData[Orthologs]
     },
     parameters={},
     input_descriptions={
@@ -846,10 +848,15 @@ plugin.methods.register_function(
     description='Create an eggnog table'
 )
 
+I_eggnog_annotate, O_eggnog_annotate = TypeMap({
+    SampleData[Orthologs]: SampleData[NOG],
+    GenomeData[Orthologs]: GenomeData[NOG],
+})
+
 plugin.pipelines.register_function(
     function=q2_moshpit.eggnog.eggnog_annotate,
     inputs={
-        'eggnog_hits': SampleData[Orthologs],
+        'eggnog_hits': I_eggnog_annotate,
         'eggnog_db': ReferenceDB[Eggnog],
     },
     input_descriptions={
@@ -871,7 +878,7 @@ plugin.pipelines.register_function(
                     'use all available.',
         **partition_param_descriptions
     },
-    outputs=[('ortholog_annotations', SampleData[NOG])],
+    outputs=[('ortholog_annotations', O_eggnog_annotate)],
     output_descriptions={
         'ortholog_annotations': 'Annotated hits.'
     },
@@ -883,7 +890,7 @@ plugin.pipelines.register_function(
 plugin.methods.register_function(
     function=q2_moshpit.eggnog._eggnog_annotate,
     inputs={
-        'eggnog_hits': SampleData[Orthologs],
+        'eggnog_hits': I_eggnog_annotate,
         'eggnog_db': ReferenceDB[Eggnog],
     },
     parameters={
@@ -898,7 +905,7 @@ plugin.methods.register_function(
         'num_cpus': 'Number of CPUs to utilize. \'0\' will '
                     'use all available.',
     },
-    outputs=[('ortholog_annotations', SampleData[NOG])],
+    outputs=[('ortholog_annotations', O_eggnog_annotate)],
     name='Annotate orthologs against eggNOG database',
     description="Apply eggnog mapper to annotate seed orthologs.",
     citations=[citations["huerta_cepas_eggnog_2019"]]
@@ -920,11 +927,15 @@ plugin.methods.register_function(
                 "artifacts containing subsets of the MAGs",
 )
 
+I_collate_orthologs, O_collate_orthologs = TypeMap({
+    SampleData[Orthologs]: SampleData[Orthologs],
+    GenomeData[Orthologs]: GenomeData[Orthologs]
+})
 plugin.methods.register_function(
     function=q2_moshpit.partition.partition_orthologs,
-    inputs={"orthologs": SampleData[Orthologs]},
+    inputs={"orthologs": I_collate_orthologs},
     parameters={"num_partitions": Int % Range(1, None)},
-    outputs={"partitioned_orthologs": Collection[SampleData[Orthologs]]},
+    outputs={"partitioned_orthologs": Collection[O_collate_orthologs]},
     input_descriptions={"orthologs": "The orthologs to partition."},
     parameter_descriptions={
         "num_partitions": "The number of partitions to split the MAGs"
@@ -932,8 +943,9 @@ plugin.methods.register_function(
         " MAGs."
     },
     name="Partition orthologs",
-    description="Partition a SampleData[Orthologs] artifact into smaller "
-                "artifacts containing subsets of the Orthologs reports.",
+    description="Partition a SampleData[Orthologs] or GenomeData[Orthologs] "
+                "artifact into smaller artifacts containing subsets of the "
+                "Orthologs reports.",
 )
 
 plugin.methods.register_function(
@@ -976,21 +988,26 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_moshpit.partition.collate_orthologs,
-    inputs={"orthologs": List[SampleData[Orthologs]]},
+    inputs={"orthologs": List[I_collate_orthologs]},
     parameters={},
-    outputs={"collated_orthologs": SampleData[Orthologs]},
+    outputs={"collated_orthologs": O_collate_orthologs},
     input_descriptions={"orthologs": "Orthologs to collate"},
     parameter_descriptions={},
     name="Collate Orthologs",
-    description="Takes a collection SampleData[Orthologs] artifacts "
-                "and collates them into a single artifact.",
+    description="Takes a collection SampleData[Orthologs] or "
+                "GenomeData[Orthologs] artifacts and collates them into "
+                "a single artifact.",
 )
 
+I_collate_annotations, O_collate_annotations = TypeMap({
+    SampleData[NOG]: SampleData[NOG],
+    GenomeData[NOG]: GenomeData[NOG]
+})
 plugin.methods.register_function(
     function=q2_moshpit.partition.collate_annotations,
-    inputs={'ortholog_annotations': List[SampleData[NOG]]},
+    inputs={'ortholog_annotations': List[I_collate_annotations]},
     parameters={},
-    outputs=[('collated_annotations', SampleData[NOG])],
+    outputs=[('collated_annotations', O_collate_annotations)],
     input_descriptions={
         'ortholog_annotations': "Collection of ortholog annotations."
     },
@@ -998,7 +1015,7 @@ plugin.methods.register_function(
         'collated_annotations': "Collated ortholog annotations."
     },
     name='Collate ortholog annotations.',
-    description="Takes a collection of SampleData[NOG]'s "
+    description="Takes a collection of SampleData[NOG]s or GenomeData[NOG]s "
                 "and collates them into a single artifact.",
 )
 
