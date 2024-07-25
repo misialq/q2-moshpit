@@ -37,6 +37,13 @@ def fetch_busco_db(
             f"Error during BUSCO database download: {e.returncode}"
         )
 
+    # The eukaryotic DB may contain some broken symlinks - unlink those
+    if euk:
+        for f in glob.glob(os.path.join(
+                busco_db, "busco_downloads", "lineages", "*", "*_odb10"
+        )):
+            os.unlink(f) if os.path.islink(f) else False
+
     # Let user know that the process is complete but it still needs
     # some time to copy files over.
     print(colorify(
