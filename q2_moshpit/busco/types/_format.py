@@ -125,6 +125,11 @@ class BuscoDatabaseDirFmt(model.DirectoryFormat):
         format=BuscoGenericTextFileFmt,
         optional=True
     )
+    missing = model.FileCollection(
+        r'busco_downloads\/lineages\/.+\/missing.+\.txt$',
+        format=BuscoGenericTextFileFmt,
+        optional=True
+    )
     version_file = model.File(
         'busco_downloads/file_versions.tsv', format=BuscoGenericTextFileFmt
     )

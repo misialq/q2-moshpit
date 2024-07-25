@@ -5,6 +5,8 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import glob
+import os
 import subprocess
 from q2_moshpit._utils import colorify, run_command
 from q2_moshpit.busco.types import BuscoDatabaseDirFmt
@@ -36,6 +38,13 @@ def fetch_busco_db(
         raise Exception(
             f"Error during BUSCO database download: {e.returncode}"
         )
+
+    # The eukaryotic DB may contain some broken symlinks - unlink those
+    if euk:
+        for f in glob.glob(os.path.join(
+                str(busco_db), "busco_downloads", "lineages", "*", "*_odb10"
+        )):
+            os.unlink(f) if os.path.islink(f) else False
 
     # Let user know that the process is complete but it still needs
     # some time to copy files over.
