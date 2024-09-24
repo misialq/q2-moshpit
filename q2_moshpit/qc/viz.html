@@ -50,16 +50,35 @@
                                 <option value="gcContent">GC Content</option>
                                 <option value="coverageDepth">Coverage Depth</option>
                                 <option value="expressionLevel">Expression Level</option>
+                                <option value="taxonomy">Taxonomy</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="taxonomy-level-select" class="form-label">Taxonomy level:</label>
+                            <select id="taxonomy-level-select" class="form-select">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-body">
                         <h5 class="card-title">Linear Genome View</h5>
                         <div id="chart-container" style="height: 500px; overflow-y: auto;">
                             <div id="chart"></div>
                         </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Legend</h5>
+                        <div id="legend"></div>
                     </div>
                 </div>
             </div>
@@ -117,6 +136,33 @@
         let currentMetric = 'gcContent';
 
         function generateGenomes(numGenomes = 25) {
+            const taxonomyLevels = [
+                ["Bacteria", "Archaea", "Eukarya"],
+                ["Proteobacteria", "Firmicutes", "Bacteroidetes", "Actinobacteria", "Euryarchaeota", "Crenarchaeota", "Ascomycota", "Basidiomycota"],
+                ["Alphaproteobacteria", "Bacilli", "Bacteroidia", "Actinobacteria", "Methanomicrobia", "Thermoprotei", "Saccharomycetes", "Agaricomycetes"],
+                ["Rhizobiales", "Bacillales", "Bacteroidales", "Corynebacteriales", "Methanosarcinales", "Sulfolobales", "Saccharomycetales", "Agaricales"],
+                ["Rhizobiaceae", "Bacillaceae", "Bacteroidaceae", "Corynebacteriaceae", "Methanosarcinaceae", "Sulfolobaceae", "Saccharomycetaceae", "Agaricaceae"],
+                ["Rhizobium", "Bacillus", "Bacteroides", "Corynebacterium", "Methanosarcina", "Sulfolobus", "Saccharomyces", "Agaricus"],
+                ["Rhizobium leguminosarum", "Bacillus subtilis", "Bacteroides fragilis", "Corynebacterium glutamicum", "Methanosarcina barkeri", "Sulfolobus acidocaldarius", "Saccharomyces cerevisiae", "Agaricus bisporus"]
+            ];
+
+            function generateTaxonomy() {
+                const taxonomy = [];
+                let currentIndex = Math.floor(Math.random() * taxonomyLevels[0].length);
+                taxonomy.push(taxonomyLevels[0][currentIndex]);
+
+                for (let i = 1; i < taxonomyLevels.length; i++) {
+                    const possibleTaxa = taxonomyLevels[i].filter(taxon => taxon.startsWith(taxonomy[i-1].substring(0, 3)));
+                    if (possibleTaxa.length > 0) {
+                        taxonomy.push(possibleTaxa[Math.floor(Math.random() * possibleTaxa.length)]);
+                    } else {
+                        // If no matching taxa found, just pick a random one from the current level
+                        taxonomy.push(taxonomyLevels[i][Math.floor(Math.random() * taxonomyLevels[i].length)]);
+                    }
+                }
+
+                return taxonomy;
+            }
             const genomes = [];
 
             for (let i = 0; i < numGenomes; i++) {
@@ -129,7 +175,8 @@
                         length: Math.floor(Math.random() * 100000), // 500,000 to 2,500,000 bp
                         gcContent: Math.random() * 0.2 + 0.3, // 30% to 50%
                         coverageDepth: Math.floor(Math.random() * 40) + 10, // 10x to 50x
-                        expressionLevel: Math.random() // 0 to 1
+                        expressionLevel: Math.random(), // 0 to 1
+                        taxonomy: generateTaxonomy()
                     });
                 }
 
@@ -148,21 +195,21 @@
             return genomes;
         }
 
+        let taxonomyColorScale;
+
+        function updateTaxonomyColorScale(taxonomyLevel) {
+            const taxonomyValues = new Set(genomes.flatMap(g => g.contigs.map(c => c.taxonomy[taxonomyLevel - 1])));
+            taxonomyColorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(taxonomyValues));
+        }
+
         // Function to update the visualization
-        function updateVisualization(metric) {
-            currentMetric = metric;
+        function updateVisualization(metric, taxonomyLevel) {
+            if (metric === 'taxonomy') {
+                updateTaxonomyColorScale(taxonomyLevel);
+            }
 
-            // Clear existing content
-            svg.selectAll("*").remove();
+            svg.selectAll(".genome-group").remove();
 
-            // Update SVG height based on the number of genomes
-            const svgHeight = Math.max(genomes.length * 30, document.getElementById('chart-container').offsetHeight);
-            svg.attr("height", svgHeight);
-
-            // Update y scale
-            yScale.range([margin.top, svgHeight - margin.bottom]);
-
-            // Create a group for each genome
             const genomeGroups = svg.selectAll(".genome-group")
                 .data(genomes)
                 .enter()
@@ -187,7 +234,9 @@
                     .attr("y", 0)
                     .attr("width", d => xScale(d.length) - xScale(0))
                     .attr("height", yScale.bandwidth())
-                    .attr("fill", d => colorScales[metric](d[metric]))
+                    .attr("fill", d => metric === 'taxonomy'
+                        ? taxonomyColorScale(d.taxonomy[taxonomyLevel - 1])
+                        : colorScales[metric](d[metric]))
                     .attr("rx", 4)
                     .attr("ry", 4)
                     .on("mouseover", function(event, d) {
@@ -200,7 +249,6 @@
                         showDetails(genome);
                     });
 
-                // Add genome name
                 group.append("text")
                     .attr("class", "genome-name")
                     .attr("x", margin.left - 10)
@@ -210,17 +258,17 @@
                     .text(genome.name);
             });
 
-            // Update legend
-            updateLegend(metric);
+            updateLegend(metric, taxonomyLevel);
         }
 
         function showTooltip(event, genome, contig) {
             tooltip.style("opacity", 1)
-                .html(`<strong>${genome.name}</strong><br/>
+                .html(`<strong>${genome.name} - ${contig.name}</strong><br/>
                        Length: ${contig.length.toLocaleString()} bp<br/>
                        GC Content: ${(contig.gcContent * 100).toFixed(2)}%<br/>
                        Coverage Depth: ${contig.coverageDepth}x<br/>
-                       Expression Level: ${contig.expressionLevel.toFixed(2)}`)
+                       Expression Level: ${contig.expressionLevel.toFixed(2)}<br/>
+                       Taxonomy: ${contig.taxonomy.join(" > ")}`)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 28) + "px");
         }
@@ -287,7 +335,6 @@
 
         // Function to show details
         function showDetails(genome) {
-            // Create and show the offcanvas
             const offcanvasElement = document.getElementById('detailsOffcanvas');
             const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
             offcanvas.show();
@@ -298,7 +345,7 @@
             detailsSvg.selectAll("*").remove();
 
             const containerRect = detailsSvg.node().getBoundingClientRect();
-            const size = Math.min(containerRect.width, containerRect.height, 600); // Limit max size to 600px or container size
+            const size = Math.min(containerRect.width, 400);
 
             const svg = detailsSvg
                 .append("svg")
@@ -309,9 +356,9 @@
 
             const width = size;
             const height = size;
-            const radius = Math.min(width, height) / 2 * 0.9; // Reduce radius to make room for legend
+            const radius = Math.min(width, height) / 2 * 0.9;
 
-            const metrics = ['gcContent', 'coverageDepth', 'expressionLevel'];
+            const metrics = ['gcContent', 'coverageDepth', 'expressionLevel', 'taxonomy'];
             const innerRadiusRatio = 0.6;
             const outerRadiusRatio = 0.9;
             const radiusStep = (outerRadiusRatio - innerRadiusRatio) / metrics.length;
@@ -325,7 +372,11 @@
                 .padAngle(arcPadAngle);
 
             const g = svg.append("g")
-                .attr("transform", `translate(${width / 2}, ${height / 2 - height * 0.05})`);  // Move circle up slightly
+                .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+            const taxonomyLevel = parseInt(d3.select("#taxonomy-level-select").property("value"));
+            const taxonomyValues = new Set(genome.contigs.map(c => c.taxonomy[taxonomyLevel - 1]));
+            const taxonomyColorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(Array.from(taxonomyValues));
 
             metrics.forEach((metric, index) => {
                 const arc = d3.arc()
@@ -338,47 +389,16 @@
                     .enter().append("path")
                     .attr("class", `arc-${metric}`)
                     .attr("d", arc)
-                    .attr("fill", d => colorScales[metric](d.data[metric]))
+                    .attr("fill", d => metric === 'taxonomy'
+                        ? taxonomyColorScale(d.data.taxonomy[taxonomyLevel - 1])
+                        : colorScales[metric](d.data[metric]))
                     .on("mouseover", function(event, d) {
-                        showDetailTooltip(event, d.data);
+                        showTooltip(event, genome, d.data);
                     })
                     .on("mouseout", function() {
                         tooltip.style("opacity", 0);
                     });
             });
-
-            // Add color-coded legend at the bottom
-            const legendData = [
-                { metric: "gcContent", label: "GC Content", color: colorScales.gcContent(0.5) },
-                { metric: "coverageDepth", label: "Coverage Depth", color: colorScales.coverageDepth(30) },
-                { metric: "expressionLevel", label: "Expression Level", color: colorScales.expressionLevel(0.5) }
-            ];
-
-            const legendHeight = 60;
-            const legend = svg.append("g")
-                .attr("transform", `translate(0, ${height - legendHeight})`);
-
-            const legendItemWidth = width / legendData.length;
-
-            const legendItems = legend.selectAll(".legend-item")
-                .data(legendData)
-                .enter().append("g")
-                .attr("class", "legend-item")
-                .attr("transform", (d, i) => `translate(${i * legendItemWidth}, 0)`);
-
-            legendItems.append("rect")
-                .attr("width", 15)
-                .attr("height", 15)
-                .attr("x", legendItemWidth / 2 - 7.5)
-                .attr("y", 0)
-                .attr("fill", d => d.color);
-
-            legendItems.append("text")
-                .attr("x", legendItemWidth / 2)
-                .attr("y", 30)
-                .attr("text-anchor", "middle")
-                .style("font-size", "12px")
-                .text(d => d.label);
         }
 
         function showDetailTooltip(event, contig) {
@@ -397,7 +417,8 @@
             // const chartContainer = document.getElementById('chart-container');
             // const chart = d3.select("#chart");
             // chart.attr("height", chartContainer.offsetHeight);
-            updateVisualization(currentMetric);
+            // updateVisualization(currentMetric);
+            updateVisualization(d3.select("#metric-select").property("value"), parseInt(d3.select("#taxonomy-level-select").property))
         });
 
         // Initial call to set the correct height
@@ -415,10 +436,19 @@
         // Initial visualization
         updateVisualization('gcContent');
         showDetails(genomes[0]);  // Show first genome by default
-
-        // Add event listener for dropdown
+        // Event listeners
         d3.select("#metric-select").on("change", function() {
-            updateVisualization(this.value);
+            const selectedMetric = this.value;
+            const taxonomyLevel = parseInt(d3.select("#taxonomy-level-select").property("value"));
+            updateVisualization(selectedMetric, taxonomyLevel);
+        });
+
+        d3.select("#taxonomy-level-select").on("change", function() {
+            const selectedMetric = d3.select("#metric-select").property("value");
+            const taxonomyLevel = parseInt(this.value);
+            if (selectedMetric === 'taxonomy') {
+                updateVisualization(selectedMetric, taxonomyLevel);
+            }
         });
     </script>
 </body>
