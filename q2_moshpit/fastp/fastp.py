@@ -39,8 +39,7 @@ def run_fastp(
         cut_right: bool = False
 ) -> CasavaOneEightSingleLanePerSampleDirFmt:
     output_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
-    manifest = input_sequences.manifest
-    for sample_id, row in manifest.iterrows():
+    for sample_id, row in input_sequences.manifest.iterrows():
         input_fp = row['forward']
         output_fp = os.path.join(output_sequences.path, os.path.basename(row['forward']))
         cmd = [
