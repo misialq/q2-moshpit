@@ -1827,7 +1827,7 @@ plugin.methods.register_function(
         'n_base_limit': Int % Range(0, None),
         'length_required': Int % Range(0, None),
         'qualified_quality_phred': Int % Range(0, 40),
-        'unqualified_percent_limit': Float % Range(0, 100),
+        'unqualified_percent_limit': Int % Range(0, 100),
         'compression': Int % Range(1, 12),
         'thread': Int % Range(1, None),
         'trim_front2': Int % Range(0, None),

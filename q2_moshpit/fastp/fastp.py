@@ -11,7 +11,29 @@ import subprocess
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 from qiime2.plugin import Int, Float, Bool
 
-def run_fastp(input_sequences: CasavaOneEightSingleLanePerSampleDirFmt, trim_front1: int = 0, trim_tail1: int = 0, cut_window_size: int = 4, cut_mean_quality: int = 20, n_base_limit: int = 5, length_required: int = 15, qualified_quality_phred: int = 15, unqualified_percent_limit: float = 40.0, compression: int = 2, thread: int = 3, trim_front2: int = 0, trim_tail2: int = 0, adapter_sequence: str = '', adapter_sequence_r2: str = '', poly_g_min_len: int = 10, poly_x_min_len: int = 10, overlap_len_require: int = 30, overlap_diff_limit: int = 5, overlap_diff_percent_limit: float = 20.0, correction: bool = False) -> CasavaOneEightSingleLanePerSampleDirFmt:
+def run_fastp(
+    input_sequences: CasavaOneEightSingleLanePerSampleDirFmt, 
+    trim_front1: int = 0, 
+    trim_tail1: int = 0, 
+    cut_window_size: int = 4, 
+    cut_mean_quality: int = 20, 
+    n_base_limit: int = 5, 
+    length_required: int = 15, 
+    qualified_quality_phred: int = 15, 
+    unqualified_percent_limit: int = 40, 
+    compression: int = 2, 
+    thread: int = 3, 
+    trim_front2: int = 0, 
+    trim_tail2: int = 0, 
+    adapter_sequence: str = '', 
+    adapter_sequence_r2: str = '', 
+    poly_g_min_len: int = 10, 
+    poly_x_min_len: int = 10, 
+    overlap_len_require: int = 30, 
+    overlap_diff_limit: int = 5, 
+    overlap_diff_percent_limit: float = 20.0, 
+    correction: bool = False
+    ) -> CasavaOneEightSingleLanePerSampleDirFmt:
     output_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
     manifest = input_sequences.manifest
     for sample_id, row in manifest.iterrows():
