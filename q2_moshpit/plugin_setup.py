@@ -52,6 +52,7 @@ from q2_types.per_sample_sequences import AlignmentMap
 from q2_types.reference_db import (
     ReferenceDB, Diamond, Eggnog, NCBITaxonomy, EggnogProteinSequences,
 )
+from q2_moshpit.fastp import run_fastp
 
 citations = Citations.load('citations.bib', package='q2_moshpit')
 
@@ -1806,4 +1807,47 @@ plugin.register_formats(EggnogHmmerIdmapFileFmt, EggnogHmmerIdmapDirectoryFmt)
 plugin.register_semantic_types(EggnogHmmerIdmap)
 plugin.register_semantic_type_to_format(
     EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
+)
+
+plugin.methods.register_function(
+    function=run_fastp,
+    inputs={
+        'input_sequences': SampleData[SequencesWithQuality]
+    },
+    parameters={
+        'trim_front1': Int % Range(0, None),
+        'trim_tail1': Int % Range(0, None),
+        'cut_window_size': Int % Range(1, None),
+        'cut_mean_quality': Int % Range(0, 40),
+        'n_base_limit': Int % Range(0, None),
+        'length_required': Int % Range(0, None),
+        'qualified_quality_phred': Int % Range(0, 40),
+        'unqualified_percent_limit': Float % Range(0, 100),
+        'compression': Int % Range(1, 12),
+        'thread': Int % Range(1, None)
+    },
+    outputs=[
+        ('output_sequences', SampleData[SequencesWithQuality])
+    ],
+    input_descriptions={
+        'input_sequences': 'Input sequences to be processed by fastp.'
+    },
+    parameter_descriptions={
+        'trim_front1': 'Number of bases to trim from the front of each read.',
+        'trim_tail1': 'Number of bases to trim from the tail of each read.',
+        'cut_window_size': 'The size of the sliding window for cutting.',
+        'cut_mean_quality': 'The mean quality required for cutting.',
+        'n_base_limit': 'The maximum number of N bases allowed in a read.',
+        'length_required': 'The minimum length required for a read to be kept.',
+        'qualified_quality_phred': 'The quality value that a base is qualified.',
+        'unqualified_percent_limit': 'The maximum percentage of unqualified bases allowed in a read.',
+        'compression': 'The compression level for the output files.',
+        'thread': 'The number of threads to use.'
+    },
+    output_descriptions={
+        'output_sequences': 'Output sequences processed by fastp.'
+    },
+    name='Process sequences with fastp',
+    description='This method uses fastp to process input sequences with various quality control options.',
+    citations=[]
 )
