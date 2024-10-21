@@ -52,6 +52,7 @@ from q2_types.per_sample_sequences import AlignmentMap
 from q2_types.reference_db import (
     ReferenceDB, Diamond, Eggnog, NCBITaxonomy, EggnogProteinSequences,
 )
+from q2_moshpit.fastp import run_fastp
 
 citations = Citations.load('citations.bib', package='q2_moshpit')
 
@@ -1806,4 +1807,78 @@ plugin.register_formats(EggnogHmmerIdmapFileFmt, EggnogHmmerIdmapDirectoryFmt)
 plugin.register_semantic_types(EggnogHmmerIdmap)
 plugin.register_semantic_type_to_format(
     EggnogHmmerIdmap, EggnogHmmerIdmapDirectoryFmt
+)
+
+I_fastp_in, I_fastp_out, = TypeMap({
+    SampleData[SequencesWithQuality] : SampleData[SequencesWithQuality],
+    SampleData[PairedEndSequencesWithQuality] : SampleData[PairedEndSequencesWithQuality],
+})
+
+plugin.methods.register_function(
+    function=run_fastp,
+    inputs={
+        'input_sequences': I_fastp_in
+    },
+    parameters={
+        'trim_front1': Int % Range(0, None),
+        'trim_tail1': Int % Range(0, None),
+        'cut_window_size': Int % Range(1, None),
+        'cut_mean_quality': Int % Range(0, 40),
+        'n_base_limit': Int % Range(0, None),
+        'length_required': Int % Range(0, None),
+        'qualified_quality_phred': Int % Range(0, 40),
+        'unqualified_percent_limit': Int % Range(0, 100),
+        'compression': Int % Range(1, 12),
+        'thread': Int % Range(1, None),
+        'trim_front2': Int % Range(0, None),
+        'trim_tail2': Int % Range(0, None),
+        'adapter_sequence': Str,
+        'adapter_sequence_r2': Str,
+        'poly_g_min_len': Int % Range(0, None),
+        'poly_x_min_len': Int % Range(0, None),
+        'overlap_len_require': Int % Range(0, None),
+        'overlap_diff_limit': Int % Range(0, None),
+        'overlap_diff_percent_limit': Int % Range(0, 100),
+        'correction': Bool,
+        'cut_front': Bool,
+        'cut_tail': Bool,
+        'cut_right': Bool
+    },
+    outputs=[
+        ('output_sequences', I_fastp_out)
+    ],
+    input_descriptions={
+        'input_sequences': 'Input sequences to be processed by fastp.'
+    },
+    parameter_descriptions={
+        'trim_front1': 'Number of bases to trim from the front of each read.',
+        'trim_tail1': 'Number of bases to trim from the tail of each read.',
+        'cut_window_size': 'The size of the sliding window for cutting.',
+        'cut_mean_quality': 'The mean quality required for cutting.',
+        'n_base_limit': 'The maximum number of N bases allowed in a read.',
+        'length_required': 'The minimum length required for a read to be kept.',
+        'qualified_quality_phred': 'The quality value that a base is qualified.',
+        'unqualified_percent_limit': 'The maximum percentage of unqualified bases allowed in a read.',
+        'compression': 'The compression level for the output files.',
+        'thread': 'The number of threads to use.',
+        'trim_front2': 'Number of bases to trim from the front of each read for paired-end reads.',
+        'trim_tail2': 'Number of bases to trim from the tail of each read for paired-end reads.',
+        'adapter_sequence': 'The adapter sequence for read 1.',
+        'adapter_sequence_r2': 'The adapter sequence for read 2.',
+        'poly_g_min_len': 'The minimum length of polyG tail to be detected.',
+        'poly_x_min_len': 'The minimum length of polyX tail to be detected.',
+        'overlap_len_require': 'The minimum overlap length required for merging.',
+        'overlap_diff_limit': 'The maximum number of mismatches allowed in the overlap region.',
+        'overlap_diff_percent_limit': 'The maximum percentage of mismatches allowed in the overlap region.',
+        'correction': 'Enable base correction in overlapped regions.',
+        'cut_front': 'Enable cutting by quality in the front.',
+        'cut_tail': 'Enable cutting by quality in the tail.',
+        'cut_right': 'Enable cutting by quality in the right.'
+    },
+    output_descriptions={
+        'output_sequences': 'Output sequences processed by fastp.'
+    },
+    name='Process sequences with fastp',
+    description='This method uses fastp to process input sequences with various quality control options.',
+    citations=[]
 )
