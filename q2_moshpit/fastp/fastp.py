@@ -7,9 +7,9 @@
 # ----------------------------------------------------------------------------
 
 import os
-import subprocess
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 from qiime2.plugin import Int, Float, Bool
+from q2_moshpit._utils import run_command
 
 
 def run_fastp(
@@ -73,5 +73,5 @@ def run_fastp(
                 '--trim_tail2', str(trim_tail2),
                 '--adapter_sequence_r2', adapter_sequence_r2
             ])
-        subprocess.run(cmd, check=True)
+        run_command(cmd, check=True)
     return output_sequences
