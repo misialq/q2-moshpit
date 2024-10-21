@@ -8,7 +8,6 @@
 
 import os
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
-from qiime2.plugin import Int, Float, Bool
 from q2_moshpit._utils import run_command
 
 
