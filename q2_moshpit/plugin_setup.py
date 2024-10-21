@@ -1838,7 +1838,7 @@ plugin.methods.register_function(
         'poly_x_min_len': Int % Range(0, None),
         'overlap_len_require': Int % Range(0, None),
         'overlap_diff_limit': Int % Range(0, None),
-        'overlap_diff_percent_limit': Float % Range(0, 100),
+        'overlap_diff_percent_limit': Int % Range(0, 100),
         'correction': Bool
     },
     outputs=[

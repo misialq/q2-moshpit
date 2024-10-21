@@ -31,7 +31,7 @@ def run_fastp(
     poly_x_min_len: int = 10, 
     overlap_len_require: int = 30, 
     overlap_diff_limit: int = 5, 
-    overlap_diff_percent_limit: float = 20.0, 
+    overlap_diff_percent_limit: int = 20, 
     correction: bool = False
     ) -> CasavaOneEightSingleLanePerSampleDirFmt:
     output_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
