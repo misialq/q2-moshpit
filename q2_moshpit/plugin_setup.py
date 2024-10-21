@@ -53,6 +53,7 @@ from q2_types.reference_db import (
     ReferenceDB, Diamond, Eggnog, NCBITaxonomy, EggnogProteinSequences,
 )
 from q2_moshpit.fastp import run_fastp
+from q2_moshpit.fastp.aggregate import aggregate_fastp_reports
 
 citations = Citations.load('citations.bib', package='q2_moshpit')
 
@@ -1814,7 +1815,7 @@ I_fastp_in, I_fastp_out, = TypeMap({
     SampleData[PairedEndSequencesWithQuality] : SampleData[PairedEndSequencesWithQuality],
 })
 
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=run_fastp,
     inputs={
         'input_sequences': I_fastp_in
@@ -1845,7 +1846,8 @@ plugin.methods.register_function(
         'cut_right': Bool
     },
     outputs=[
-        ('output_sequences', I_fastp_out)
+        ('output_sequences', I_fastp_out),
+        ('visualization', Visualization)
     ],
     input_descriptions={
         'input_sequences': 'Input sequences to be processed by fastp.'
@@ -1876,9 +1878,10 @@ plugin.methods.register_function(
         'cut_right': 'Enable cutting by quality in the right.'
     },
     output_descriptions={
-        'output_sequences': 'Output sequences processed by fastp.'
+        'output_sequences': 'Output sequences processed by fastp.',
+        'visualization': 'Visualization of the fastp reports.'
     },
     name='Process sequences with fastp',
-    description='This method uses fastp to process input sequences with various quality control options.',
+    description='This method uses fastp to process input sequences with various quality control options and generates a visualization of the reports.',
     citations=[]
 )

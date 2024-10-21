@@ -9,14 +9,15 @@
 import os
 import subprocess
 import unittest
-from q2_types.per_sample_sequences import SingleLanePerSampleSingleEndFastqDirFmt
+from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 from q2_moshpit.fastp import run_fastp
+from q2_moshpit.fastp.aggregate import aggregate_fastp_reports
 
 class TestFastp(unittest.TestCase):
 
     def setUp(self):
-        self.input_sequences = SingleLanePerSampleSingleEndFastqDirFmt()
-        self.output_sequences = SingleLanePerSampleSingleEndFastqDirFmt()
+        self.input_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
+        self.output_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
 
         # Create dummy input files
         for i in range(1, 4):
@@ -36,6 +37,30 @@ class TestFastp(unittest.TestCase):
         for i in range(1, 4):
             output_fp = os.path.join(output_sequences.path, f'sample{i}.fastq.gz')
             self.assertGreater(os.path.getsize(output_fp), 0)
+
+    def test_aggregate_fastp_reports(self):
+        report_dir = 'test_reports'
+        output_dir = 'test_output'
+        os.makedirs(report_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Create dummy HTML reports
+        for i in range(1, 4):
+            report_fp = os.path.join(report_dir, f'sample{i}.html')
+            with open(report_fp, 'w') as f:
+                f.write(f'<html><body>Report for sample{i}</body></html>')
+
+        aggregate_fastp_reports(report_dir, output_dir)
+
+        # Check if the aggregated report is created
+        aggregated_report_fp = os.path.join(output_dir, 'index.html')
+        self.assertTrue(os.path.exists(aggregated_report_fp))
+
+        # Check if the aggregated report contains the individual reports
+        with open(aggregated_report_fp, 'r') as f:
+            aggregated_content = f.read()
+            for i in range(1, 4):
+                self.assertIn(f'Report for sample{i}', aggregated_content)
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,6 +10,7 @@ import os
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
 from qiime2.plugin import Int, Float, Bool
 from q2_moshpit._utils import run_command
+from q2_moshpit.fastp.aggregate import aggregate_fastp_reports
 
 
 def run_fastp(
@@ -37,15 +38,19 @@ def run_fastp(
         cut_front: bool = False,
         cut_tail: bool = False,
         cut_right: bool = False
-) -> CasavaOneEightSingleLanePerSampleDirFmt:
+) -> (CasavaOneEightSingleLanePerSampleDirFmt, qiime2.Visualization):
     output_sequences = CasavaOneEightSingleLanePerSampleDirFmt()
+    report_dir = os.path.join(output_sequences.path, 'reports')
+    os.makedirs(report_dir, exist_ok=True)
     for sample_id, row in input_sequences.manifest.iterrows():
         input_fp = row['forward']
         output_fp = os.path.join(output_sequences.path, os.path.basename(row['forward']))
+        report_fp = os.path.join(report_dir, f'{sample_id}.html')
         cmd = [
             'fastp',
             '--in1', input_fp,
             '--out1', output_fp,
+            '--html', report_fp,
             '--trim_front1', str(trim_front1),
             '--trim_tail1', str(trim_tail1),
             '--n_base_limit', str(n_base_limit),
@@ -85,4 +90,6 @@ def run_fastp(
                 '--adapter_sequence_r2', adapter_sequence_r2
             ])
         run_command(cmd)
-    return output_sequences
+    aggregate_fastp_reports(report_dir, output_sequences.path)
+    visualization = qiime2.Visualization(output_sequences.path)
+    return output_sequences, visualization
