@@ -1812,7 +1812,7 @@ plugin.register_semantic_type_to_format(
 plugin.methods.register_function(
     function=run_fastp,
     inputs={
-        'input_sequences': SampleData[SequencesWithQuality]
+        'input_sequences': SampleData[SequencesWithQuality | PairedEndSequencesWithQuality]
     },
     parameters={
         'trim_front1': Int % Range(0, None),
@@ -1824,10 +1824,20 @@ plugin.methods.register_function(
         'qualified_quality_phred': Int % Range(0, 40),
         'unqualified_percent_limit': Float % Range(0, 100),
         'compression': Int % Range(1, 12),
-        'thread': Int % Range(1, None)
+        'thread': Int % Range(1, None),
+        'trim_front2': Int % Range(0, None),
+        'trim_tail2': Int % Range(0, None),
+        'adapter_sequence': Str,
+        'adapter_sequence_r2': Str,
+        'poly_g_min_len': Int % Range(0, None),
+        'poly_x_min_len': Int % Range(0, None),
+        'overlap_len_require': Int % Range(0, None),
+        'overlap_diff_limit': Int % Range(0, None),
+        'overlap_diff_percent_limit': Float % Range(0, 100),
+        'correction': Bool
     },
     outputs=[
-        ('output_sequences', SampleData[SequencesWithQuality])
+        ('output_sequences', SampleData[SequencesWithQuality | PairedEndSequencesWithQuality])
     ],
     input_descriptions={
         'input_sequences': 'Input sequences to be processed by fastp.'
@@ -1842,7 +1852,17 @@ plugin.methods.register_function(
         'qualified_quality_phred': 'The quality value that a base is qualified.',
         'unqualified_percent_limit': 'The maximum percentage of unqualified bases allowed in a read.',
         'compression': 'The compression level for the output files.',
-        'thread': 'The number of threads to use.'
+        'thread': 'The number of threads to use.',
+        'trim_front2': 'Number of bases to trim from the front of each read for paired-end reads.',
+        'trim_tail2': 'Number of bases to trim from the tail of each read for paired-end reads.',
+        'adapter_sequence': 'The adapter sequence for read 1.',
+        'adapter_sequence_r2': 'The adapter sequence for read 2.',
+        'poly_g_min_len': 'The minimum length of polyG tail to be detected.',
+        'poly_x_min_len': 'The minimum length of polyX tail to be detected.',
+        'overlap_len_require': 'The minimum overlap length required for merging.',
+        'overlap_diff_limit': 'The maximum number of mismatches allowed in the overlap region.',
+        'overlap_diff_percent_limit': 'The maximum percentage of mismatches allowed in the overlap region.',
+        'correction': 'Enable base correction in overlapped regions.'
     },
     output_descriptions={
         'output_sequences': 'Output sequences processed by fastp.'
