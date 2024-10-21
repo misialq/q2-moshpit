@@ -32,13 +32,14 @@ def run_fastp(input_sequences: CasavaOneEightSingleLanePerSampleDirFmt, trim_fro
             '--compression', str(compression),
             '--thread', str(thread),
             '--adapter_sequence', adapter_sequence,
-            '--correction', correction,
             '--poly_g_min_len', str(poly_g_min_len),
             '--poly_x_min_len', str(poly_x_min_len),
             '--overlap_len_require', str(overlap_len_require),
             '--overlap_diff_limit', str(overlap_diff_limit),
             '--overlap_diff_percent_limit', str(overlap_diff_percent_limit)
         ]
+        if correction:
+            cmd.append('--correction')
         if 'reverse' in row and row['reverse'] is not None:
             input_fp2 = row['reverse']
             output_fp2 = os.path.join(output_sequences.path, os.path.basename(row['reverse']))
