@@ -49,8 +49,6 @@ def run_fastp(
             '--out1', output_fp,
             '--trim_front1', str(trim_front1),
             '--trim_tail1', str(trim_tail1),
-            '--cut_window_size', str(cut_window_size),
-            '--cut_mean_quality', str(cut_mean_quality),
             '--n_base_limit', str(n_base_limit),
             '--length_required', str(length_required),
             '--qualified_quality_phred', str(qualified_quality_phred),
@@ -66,12 +64,17 @@ def run_fastp(
         ]
         if correction:
             cmd.append('--correction')
-        if cut_front:
-            cmd.append('--cut_front')
-        if cut_tail:
-            cmd.append('--cut_tail')
-        if cut_right:
-            cmd.append('--cut_right')
+        if cut_front or cut_tail or cut_right:
+            cmd.extend([
+                '--cut_window_size', str(cut_window_size),
+                '--cut_mean_quality', str(cut_mean_quality)
+            ])
+            if cut_front:
+                cmd.append('--cut_front')
+            if cut_tail:
+                cmd.append('--cut_tail')
+            if cut_right:
+                cmd.append('--cut_right')
         if 'reverse' in row and row['reverse'] is not None:
             input_fp2 = row['reverse']
             output_fp2 = os.path.join(output_sequences.path, os.path.basename(row['reverse']))
