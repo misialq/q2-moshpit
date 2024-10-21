@@ -82,5 +82,5 @@ def run_fastp(
                 '--trim_tail2', str(trim_tail2),
                 '--adapter_sequence_r2', adapter_sequence_r2
             ])
-        run_command(cmd, check=True)
+        run_command(cmd)
     return output_sequences
