@@ -1,3 +1,3 @@
-from .fastp import run_fastp
+from .fastp import fastp
 
-__all__ = ['run_fastp']
+__all__ = ['fastp']

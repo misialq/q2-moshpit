@@ -52,7 +52,7 @@ from q2_types.per_sample_sequences import AlignmentMap
 from q2_types.reference_db import (
     ReferenceDB, Diamond, Eggnog, NCBITaxonomy, EggnogProteinSequences,
 )
-from q2_moshpit.fastp import run_fastp
+from q2_moshpit.fastp import fastp
 from q2_moshpit.fastp.aggregate import aggregate_fastp_reports
 
 citations = Citations.load('citations.bib', package='q2_moshpit')
@@ -1815,71 +1815,73 @@ I_fastp_in, I_fastp_out, = TypeMap({
     SampleData[PairedEndSequencesWithQuality] : SampleData[PairedEndSequencesWithQuality],
 })
 
-plugin.pipelines.register_function(
-    function=run_fastp,
+plugin.methods.register_function(
+    function=fastp,
     inputs={
-        'input_sequences': I_fastp_in
+        'sequences': I_fastp_in
     },
     parameters={
         'trim_front1': Int % Range(0, None),
         'trim_tail1': Int % Range(0, None),
-        'cut_window_size': Int % Range(1, None),
-        'cut_mean_quality': Int % Range(0, 40),
-        'n_base_limit': Int % Range(0, None),
-        'length_required': Int % Range(0, None),
-        'qualified_quality_phred': Int % Range(0, 40),
-        'unqualified_percent_limit': Int % Range(0, 100),
-        'compression': Int % Range(1, 12),
-        'thread': Int % Range(1, None),
         'trim_front2': Int % Range(0, None),
         'trim_tail2': Int % Range(0, None),
+        'max_len1': Int % Range(0, None),
+        'max_len2': Int % Range(0, None),
+        'n_base_limit': Int % Range(0, None),
+        'qualified_quality_phred': Int % Range(0, None),
+        'unqualified_percent_limit': Int % Range(0, 100),
+        'length_required': Int % Range(0, None),
+        'compression': Int % Range(1, 12),
+        'thread': Int % Range(1, None),
         'adapter_sequence': Str,
         'adapter_sequence_r2': Str,
         'poly_g_min_len': Int % Range(0, None),
         'poly_x_min_len': Int % Range(0, None),
+        'correction': Bool,
         'overlap_len_require': Int % Range(0, None),
         'overlap_diff_limit': Int % Range(0, None),
         'overlap_diff_percent_limit': Int % Range(0, 100),
-        'correction': Bool,
         'cut_front': Bool,
         'cut_tail': Bool,
-        'cut_right': Bool
+        'cut_right': Bool,
+        'cut_window_size': Int % Range(1, None),
+        'cut_mean_quality': Int % Range(0, None),
     },
     outputs=[
-        ('output_sequences', I_fastp_out),
-        ('visualization', Visualization)
+        ('processed_sequences', I_fastp_out),
     ],
     input_descriptions={
-        'input_sequences': 'Input sequences to be processed by fastp.'
+        'sequences': 'Input sequences to be processed by fastp.'
     },
     parameter_descriptions={
-        'trim_front1': 'Number of bases to trim from the front of each read.',
-        'trim_tail1': 'Number of bases to trim from the tail of each read.',
-        'cut_window_size': 'The size of the sliding window for cutting.',
-        'cut_mean_quality': 'The mean quality required for cutting.',
+        'trim_front1': 'Number of bases to trim from the front of forward read.',
+        'trim_tail1': 'Number of bases to trim from the tail of forward read.',
+        'max_len1': 'If forward read is longer than max_len1, then trim it at its tail to make it as long as max_len1',
+        'trim_front2': 'Number of bases to trim from the front of reverse read.',
+        'trim_tail2': 'Number of bases to trim from the tail of reverse read.',
+        'max_len2': 'If reverse read is longer than max_len2, then trim it at its tail to make it as long as max_len2',
         'n_base_limit': 'The maximum number of N bases allowed in a read.',
-        'length_required': 'The minimum length required for a read to be kept.',
         'qualified_quality_phred': 'The quality value that a base is qualified.',
         'unqualified_percent_limit': 'The maximum percentage of unqualified bases allowed in a read.',
+        'length_required': 'The minimum length required for a read to be kept.',
         'compression': 'The compression level for the output files.',
         'thread': 'The number of threads to use.',
-        'trim_front2': 'Number of bases to trim from the front of each read for paired-end reads.',
-        'trim_tail2': 'Number of bases to trim from the tail of each read for paired-end reads.',
         'adapter_sequence': 'The adapter sequence for read 1.',
         'adapter_sequence_r2': 'The adapter sequence for read 2.',
         'poly_g_min_len': 'The minimum length of polyG tail to be detected.',
         'poly_x_min_len': 'The minimum length of polyX tail to be detected.',
-        'overlap_len_require': 'The minimum overlap length required for merging.',
-        'overlap_diff_limit': 'The maximum number of mismatches allowed in the overlap region.',
-        'overlap_diff_percent_limit': 'The maximum percentage of mismatches allowed in the overlap region.',
         'correction': 'Enable base correction in overlapped regions.',
-        'cut_front': 'Enable cutting by quality in the front.',
-        'cut_tail': 'Enable cutting by quality in the tail.',
-        'cut_right': 'Enable cutting by quality in the right.'
+        'overlap_len_require': 'The minimum length to detect overlapped region of PE reads.',
+        'overlap_diff_limit': 'The maximum number of mismatched bases to detect overlapped region of PE reads.',
+        'overlap_diff_percent_limit': 'The maximum percentage of mismatched bases to detect overlapped region of PE reads.',
+        'cut_window_size': 'The window size option shared by cut_front, cut_tail or cut_sliding.',
+        'cut_mean_quality': 'The mean quality requirement option shared by cut_front, cut_tail or cut_sliding.',
+        'cut_front': 'Move a sliding window from front (5\') to tail.',
+        'cut_tail': 'Move a sliding window from tail (3\') to front.',
+        'cut_right': 'Move a sliding window from front to tail.'
     },
     output_descriptions={
-        'output_sequences': 'Output sequences processed by fastp.',
-        'visualization': 'Visualization of the fastp reports.'
+        'processed_sequences': 'Output sequences processed by fastp.',
     },
     name='Process sequences with fastp',
     description='This method uses fastp to process input sequences with various quality control options and generates a visualization of the reports.',

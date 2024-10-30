@@ -10,7 +10,7 @@ import os
 import subprocess
 import unittest
 from q2_types.per_sample_sequences import CasavaOneEightSingleLanePerSampleDirFmt
-from q2_moshpit.fastp import run_fastp
+from q2_moshpit.fastp import fastp
 from q2_moshpit.fastp.aggregate import aggregate_fastp_reports
 
 class TestFastp(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestFastp(unittest.TestCase):
                 f.write('@SEQ_ID\nGATTTGGGGTTTCCCAGTTG\n+\nIIIIIIIIIIIIIIIIIIII\n')
 
     def test_run_fastp(self):
-        output_sequences = run_fastp(self.input_sequences, trim_front1=5, trim_tail1=5, cut_window_size=4, cut_mean_quality=20, n_base_limit=5, length_required=15, qualified_quality_phred=15, unqualified_percent_limit=40.0, compression=2, thread=3)
+        output_sequences = fastp(self.input_sequences, trim_front1=5, trim_tail1=5, cut_window_size=4, cut_mean_quality=20, n_base_limit=5, length_required=15, qualified_quality_phred=15, unqualified_percent_limit=40.0, compression=2, thread=3)
 
         # Check if output files are created
         for i in range(1, 4):
