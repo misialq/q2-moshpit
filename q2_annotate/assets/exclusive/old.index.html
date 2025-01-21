@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="js/bootstrapMagic.js" type="text/javascript"></script>
+<link href="css/styles.css" rel="stylesheet"/>
+<script type="text/javascript">
+    // temporary hack to make it look good with Bootstrap 5
+    removeBS3refs();
+</script>
+<link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJ6dYkowFFvp4kKs=" rel="stylesheet"/>
+<style>
+    .form-check-label {
+        font-size: 1.2em;
+        margin-right: 15px;
+    }
+    .checkbox-card {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+    }
+    .svg-container {
+        width: 100%;
+        height: auto;
+        position: relative;
+        overflow: hidden;
+    }
+    .svg-layer {
+        width: 100%;
+        height: auto;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .card {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>KEGG Pathways</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Checkbox Card -->
+            <div class="card mb-3">
+                <div class="card-body checkbox-card">
+                    <h5 class="card-title">Select samples:</h5>
+                    <div id="checkbox-container" class="mb-3">
+                        <!-- Checkboxes will be added dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SVG Card -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="svg-container" id="svg-container">
+                        <!-- SVG layers will be added dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Embed filenames as a data attribute -->
+<script id="svg-filenames" type="application/json">
+    {{
+        filenames
+        |
+        safe
+    }}
+</script>
+
+<script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        // temporary hack to make it look good with Bootstrap 5
+        // adjustTagsToBS3();
+
+        const checkboxContainer = document.getElementById('checkbox-container');
+        const svgContainer = document.getElementById('svg-container');
+
+        // Parse SVG filenames from the embedded script tag
+        const svgFiles = JSON.parse(document.getElementById('svg-filenames').textContent);
+
+        // Dynamically create checkboxes and SVG layers
+        svgFiles.forEach((file, index) => {
+            const id = `svg${index + 1}`;
+            const sampleName = file.split('/').pop().split('.')[0];
+
+            // Create a checkbox
+            const label = document.createElement('label');
+            label.classList.add('form-check-label');
+            label.innerHTML = `<input type="checkbox" class="form-check-input" data-target="${id}" ${index === 0 ? 'checked' : ''}> ${sampleName}`;
+            checkboxContainer.appendChild(label);
+
+            // Create an SVG layer
+            const img = document.createElement('img');
+            img.src = file;
+            img.id = id;
+            img.classList.add('svg-layer');
+            img.style.opacity = '0.8';
+            img.style.zIndex = 1;
+            if (index !== 0) img.style.display = 'none';
+            svgContainer.appendChild(img);
+        });
+
+        // Function to update opacity based on visible SVGs
+        function updateOpacity() {
+            const visibleSVGs = Array.from(svgContainer.children).filter(img => img.style.display === 'block').slice().reverse();
+            const maxOpacity = 1.0;
+            const minOpacity = 0.8;
+            const range = maxOpacity - minOpacity;
+
+            visibleSVGs.forEach((img, i) => {
+                const opacity = minOpacity + range * Math.log(i + 1) / Math.log(visibleSVGs.length);
+                img.style.opacity = opacity;
+            });
+        }
+
+        // Add event listeners for dynamically created checkboxes
+        checkboxContainer.addEventListener('change', (event) => {
+            if (event.target.type === 'checkbox') {
+                const targetId = event.target.dataset.target;
+                const svgElement = document.getElementById(targetId);
+
+                if (event.target.checked) {
+                    svgElement.style.display = 'block';
+                } else {
+                    svgElement.style.display = 'none';
+                }
+                updateOpacity();
+            }
+        });
+
+        // Initial opacity update
+        updateOpacity();
+    });
+</script>
+{% endblock %}
+
+{% block footer %}
+{% set loading_selector = '#loading' %}
+{% include 'js-error-handler.html' %}
+{% endblock %}

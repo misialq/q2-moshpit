@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<script src="js/bootstrapMagic.js" type="text/javascript"></script>
+<link href="css/styles.css" rel="stylesheet"/>
+<script type="text/javascript">
+    // temporary hack to make it look good with Bootstrap 5
+    removeBS3refs();
+</script>
+<link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha256-YvdLHPgkqJ8DVUxjjnGVlMMJtNimJ6dYkowFFvp4kKs=" rel="stylesheet"/>
+{% endblock %}
+
+{% block content %}
+<script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<br>
+<div class="row" style="justify-content: space-evenly; align-items: start;">
+<!--    <div class="row" style="margin-bottom: 10px" id="checkbox-container-top">-->
+<!--        <div class="col-lg-12" style="margin: unset">-->
+<!--            <div class="card">-->
+<!--                <h5 class="card-header">Sample selection</h5>-->
+<!--                <div class="card-body">-->
+<!--                    <div id="checkbox-container">-->
+<!--                        &lt;!&ndash; Checkboxes will be added dynamically &ndash;&gt;-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+    <div class="row" style="margin-bottom: 10px" id="svg-container-top">
+        <div class="col-lg-12" style="margin: unset">
+            <div class="card">
+                <h5 class="card-header">iPATH3 metabolic pathways</h5>
+                <div class="card-body">
+                    <div id="svg-container">
+                        <!-- SVGs will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script id="filenames" type="application/json">
+    {{
+        filenames
+        |
+        safe
+    }}
+</script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        const svgFiles = JSON.parse(document.getElementById('filenames').textContent);
+        console.log(svgFiles)
+        const checkboxContainer = document.getElementById('checkbox-container');
+        const svgContainer = document.getElementById('svg-container');
+
+        svgFiles.forEach((file, index) => {
+            const id = `svg${index + 1}`;
+            const sampleName = file.split('/').pop().split('.')[0];
+
+            // Create a checkbox
+            // const label = document.createElement('label');
+            // label.classList.add('form-check-label');
+            // label.innerHTML = `<input type="checkbox" class="form-check-input" data-target="${id}" ${index === 0 ? 'checked' : ''}> ${sampleName}`;
+            // checkboxContainer.appendChild(label);
+
+            // Create an SVG layer
+            const img = document.createElement('img');
+            img.src = file;
+            img.id = id;
+            img.classList.add('svg-layer');
+            // img.style.opacity = '0.5';
+            // img.style.zIndex = 1;
+            // if (index !== 0) img.style.display = 'none';
+            svgContainer.appendChild(img);
+        });
+
+        // Function to update opacity based on visible SVGs
+        // function updateOpacity() {
+        //     const visibleSVGs = Array.from(svgContainer.children)
+        //         .filter(img => img.style.display === 'block');
+        //
+        //     const maxOpacity = 1.0;
+        //     const minOpacity = 0.5;
+        //     const range = maxOpacity - minOpacity;
+        //
+        //     const step = range / (visibleSVGs.length - 1 || 1); // Avoid division by zero
+        //
+        //     Array.from(svgContainer.children).forEach((img) => {
+        //         if (!visibleSVGs.includes(img)) {
+        //             img.style.opacity = 0; // Hide non-selected elements
+        //         }
+        //     });
+        //
+        //     visibleSVGs.forEach((img, i) => {
+        //         img.style.opacity = maxOpacity - i * step; // Gradually decrease opacity
+        //     });
+        // }
+
+        // Add event listeners for dynamically created checkboxes
+        // checkboxContainer.addEventListener('change', (event) => {
+        //     if (event.target.type === 'checkbox') {
+        //         const targetId = event.target.dataset.target;
+        //         const svgElement = document.getElementById(targetId);
+        //
+        //         if (event.target.checked) {
+        //             svgElement.style.display = 'block';
+        //         } else {
+        //             svgElement.style.display = 'none';
+        //         }
+        //         updateOpacity();
+        //     }
+        // });
+
+        const img = document.getElementById("svg1");
+        console.log(img)
+        fetch(img.src)
+            .then(response => response.text())
+            .then(svgText => {
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+            const svgElement = svgDoc.querySelector("svg");
+            img.replaceWith(svgElement);
+            console.log(svgElement)
+            });
+
+        // Initial opacity update
+        // updateOpacity();
+    });
+</script>
+
+{% endblock %}
+
+{% block footer %}
+{% set loading_selector = '#loading' %}
+{% include 'js-error-handler.html' %}
+{% endblock %}
