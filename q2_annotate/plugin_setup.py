@@ -7,6 +7,7 @@
 # ----------------------------------------------------------------------------
 import importlib
 
+from q2_composition import DifferentialAbundance
 from q2_quality_control.plugin_setup import (
     filter_parameters, filter_parameter_descriptions
 )
@@ -1800,6 +1801,27 @@ plugin.pipelines.register_function(
                 '(M x P). Note that the tables must be identical in the N '
                 'dimension.',
     citations=[]
+)
+
+plugin.visualizers.register_function(
+    function=q2_annotate.eggnog.map_pathways,
+    inputs={
+        "differentials": FeatureData[DifferentialAbundance],
+    },
+    parameters={
+        "significance_threshold": Float,
+        "log2_fold_change_threshold": Float
+    },
+    input_descriptions={
+        "differentials": "Table.",
+    },
+    parameter_descriptions={
+        "significance_threshold": "Significance threshold. Applies to the q-value.",
+        "log2_fold_change_threshold": "Log2 fold change threshold.",
+    },
+    name="Visualize KEGG pathways.",
+    description=".",
+    citations=[],
 )
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)

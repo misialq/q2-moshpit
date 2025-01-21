@@ -15,6 +15,7 @@ from .dbs import (
     fetch_eggnog_proteins, build_eggnog_diamond_db, fetch_ncbi_taxonomy,
     fetch_eggnog_hmmer_db
 )
+from .pathways import map_pathways
 
 __all__ = [
     'search_orthologs_diamond', '_eggnog_diamond_search', 'map_eggnog',
@@ -22,5 +23,5 @@ __all__ = [
     'build_custom_diamond_db', 'fetch_eggnog_proteins',
     'build_eggnog_diamond_db', 'fetch_ncbi_taxonomy', '_eggnog_annotate',
     'fetch_eggnog_hmmer_db', 'search_orthologs_hmmer', '_eggnog_hmmer_search',
-    'extract_annotations'
+    'extract_annotations', 'map_pathways'
 ]
