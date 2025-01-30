@@ -14,22 +14,14 @@
 <script crossorigin="anonymous" integrity="sha256-9SEPo+fwJFpMUet/KACSwO+Z/dKMReF9q4zFhU/fT9M=" src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <br>
-<div class="row" style="justify-content: space-evenly; align-items: start;">
-<!--    <div class="row" style="margin-bottom: 10px" id="checkbox-container-top">-->
-<!--        <div class="col-lg-12" style="margin: unset">-->
-<!--            <div class="card">-->
-<!--                <h5 class="card-header">Sample selection</h5>-->
-<!--                <div class="card-body">-->
-<!--                    <div id="checkbox-container">-->
-<!--                        &lt;!&ndash; Checkboxes will be added dynamically &ndash;&gt;-->
-<!--                    </div>-->
-<!--                </div>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
 
+<div class="row" style="justify-content: space-evenly; align-items: start;">
     <div class="row" style="margin-bottom: 10px" id="svg-container-top">
         <div class="col-lg-12" style="margin: unset">
+            <div class="d-flex mb-3">
+                <button id="open-ipath3" class="btn btn-primary mr-3">Open on iPATH3</button>
+                <select id="comparison-dropdown" class="form-select" style="max-width: 200px; margin-left: 10px;"></select>
+            </div>
             <div class="card">
                 <h5 class="card-header">iPATH3 metabolic pathways</h5>
                 <div class="card-body">
@@ -42,7 +34,6 @@
     </div>
 </div>
 
-
 <script id="filenames" type="application/json">
     {{
         filenames
@@ -51,85 +42,83 @@
     }}
 </script>
 
+<script id="comparisons" type="application/json">
+    {{
+        comparisons
+        |
+        safe
+    }}
+</script>
+
+<script id="requestBody" type="application/json">
+    {{
+        request_body
+        |
+        safe
+    }}
+</script>
+
 <script type="text/javascript">
     $(document).ready(function () {
         const svgFiles = JSON.parse(document.getElementById('filenames').textContent);
-        console.log(svgFiles)
-        const checkboxContainer = document.getElementById('checkbox-container');
+        const comparisons = JSON.parse(document.getElementById('comparisons').textContent);
+        const requestBody = JSON.parse(document.getElementById('requestBody').textContent);
         const svgContainer = document.getElementById('svg-container');
+        const dropdown = document.getElementById('comparison-dropdown');
 
-        svgFiles.forEach((file, index) => {
-            const id = `svg${index + 1}`;
-            const sampleName = file.split('/').pop().split('.')[0];
-
-            // Create a checkbox
-            // const label = document.createElement('label');
-            // label.classList.add('form-check-label');
-            // label.innerHTML = `<input type="checkbox" class="form-check-input" data-target="${id}" ${index === 0 ? 'checked' : ''}> ${sampleName}`;
-            // checkboxContainer.appendChild(label);
-
-            // Create an SVG layer
-            const img = document.createElement('img');
-            img.src = file;
-            img.id = id;
-            img.classList.add('svg-layer');
-            // img.style.opacity = '0.5';
-            // img.style.zIndex = 1;
-            // if (index !== 0) img.style.display = 'none';
-            svgContainer.appendChild(img);
+        // Populate dropdown with comparison names
+        comparisons.forEach((comparison, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = comparison;
+            dropdown.appendChild(option);
         });
 
-        // Function to update opacity based on visible SVGs
-        // function updateOpacity() {
-        //     const visibleSVGs = Array.from(svgContainer.children)
-        //         .filter(img => img.style.display === 'block');
-        //
-        //     const maxOpacity = 1.0;
-        //     const minOpacity = 0.5;
-        //     const range = maxOpacity - minOpacity;
-        //
-        //     const step = range / (visibleSVGs.length - 1 || 1); // Avoid division by zero
-        //
-        //     Array.from(svgContainer.children).forEach((img) => {
-        //         if (!visibleSVGs.includes(img)) {
-        //             img.style.opacity = 0; // Hide non-selected elements
-        //         }
-        //     });
-        //
-        //     visibleSVGs.forEach((img, i) => {
-        //         img.style.opacity = maxOpacity - i * step; // Gradually decrease opacity
-        //     });
-        // }
+        // Function to load SVG based on dropdown selection
+        function loadSVG(index) {
+            const file = svgFiles[index];
+            fetch(file)
+                .then(response => response.text())
+                .then(svgText => {
+                    const parser = new DOMParser();
+                    const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+                    const svgElement = svgDoc.querySelector("svg");
+                    svgContainer.innerHTML = ''; // Clear previous SVG
+                    svgContainer.appendChild(svgElement);
+                });
+        }
 
-        // Add event listeners for dynamically created checkboxes
-        // checkboxContainer.addEventListener('change', (event) => {
-        //     if (event.target.type === 'checkbox') {
-        //         const targetId = event.target.dataset.target;
-        //         const svgElement = document.getElementById(targetId);
-        //
-        //         if (event.target.checked) {
-        //             svgElement.style.display = 'block';
-        //         } else {
-        //             svgElement.style.display = 'none';
-        //         }
-        //         updateOpacity();
-        //     }
-        // });
+        // Load the first SVG by default
+        loadSVG(0);
 
-        const img = document.getElementById("svg1");
-        console.log(img)
-        fetch(img.src)
-            .then(response => response.text())
-            .then(svgText => {
-            const parser = new DOMParser();
-            const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
-            const svgElement = svgDoc.querySelector("svg");
-            img.replaceWith(svgElement);
-            console.log(svgElement)
-            });
+        // Change event for dropdown
+        dropdown.addEventListener('change', function() {
+            loadSVG(this.value);
+        });
 
-        // Initial opacity update
-        // updateOpacity();
+        // Add event listener for the button
+        document.getElementById('open-ipath3').addEventListener('click', function() {
+            const selectedComparison = comparisons[dropdown.value];
+            const params = requestBody[selectedComparison];
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'https://pathways.embl.de/ipath3.cgi';
+            form.target = '_blank'; // Open in a new window
+
+            // Add each key-value pair as a hidden input
+            for (const [key, value] of Object.entries(params)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        });
     });
 </script>
 

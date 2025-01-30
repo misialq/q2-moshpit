@@ -1810,7 +1810,7 @@ plugin.visualizers.register_function(
     },
     parameters={
         "significance_threshold": Float,
-        "log2_fold_change_threshold": Float
+        "log2_fold_change_threshold": Float,
     },
     input_descriptions={
         "differentials": "Table.",
