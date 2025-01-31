@@ -5,13 +5,17 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import os
 import subprocess
+from io import StringIO
 
 import pandas as pd
+import qiime2
 
 from q2_types.genome_data import (
     OrthologAnnotationDirFmt, Orthologs, SeedOrthologDirFmt, OrthologFileFmt
 )
+from q2_types.genome_data._deferred_setup._transformers import _annotations_to_dataframe, _is_valid_uuid4
 from q2_types.reference_db import EggnogRefDirFmt
 from q2_types.sample_data import SampleData
 
@@ -178,3 +182,73 @@ def extract_annotations(
     result = pd.concat(annotations, axis=1).fillna(0).T
     result.index.name = "id"
     return result
+
+
+def filter_annotations(
+        ortholog_annotations: OrthologAnnotationDirFmt,
+        query: str,
+        max_evalue: float = 1.0,
+        min_score: float = 0.0
+) -> OrthologAnnotationDirFmt:
+    annotations = ortholog_annotations.annotation_dict()
+    filtered_annotations = OrthologAnnotationDirFmt()
+    parsed = {}
+    for _id, path in annotations.items():
+        comments_start, comments_end, lines = [], [], []
+        start = True
+        with open(path, 'r') as f:
+            for line in f:
+                if line.startswith("##"):
+                    if start:
+                        comments_start.append(line)
+                    else:
+                        comments_end.append(line)
+                else:
+                    lines.append(line)
+                    start = False
+
+        df = pd.read_csv(StringIO('\n'.join(lines)), sep='\t', index_col=0)
+        if _is_valid_uuid4(_id):
+            df['MAG'] = _id
+        else:
+            df['Sample'] = _id
+
+        # to satisfy QIIME2's particular requirements
+        df.reset_index(drop=False, inplace=True)
+        df.index = df.index.astype(str)
+        df.index.rename('id', inplace=True)
+
+        # filter by query
+        metadata = qiime2.Metadata(df)
+        ids = metadata.get_ids(where=query)
+        if ids:
+            filtered = metadata.filter_ids(ids).to_dataframe()
+        else:
+            filtered = pd.DataFrame()
+
+        # filter by scores
+        filtered = _filter(filtered, max_evalue, min_score)
+
+        parsed[_id] = {
+            'df': df, 'comments_start': comments_start,
+            'comments_end': comments_end, 'filtered': filtered
+        }
+
+    for _id, values in parsed.items():
+        fp = os.path.join(str(filtered_annotations), f"{_id}.emapper.annotations")
+        with open(fp, 'w') as f:
+            for comment in values['comments_start']:
+                f.write(comment)
+
+        # clean up the df
+        for col in ['MAG', 'Sample']:
+            if col in values['filtered']:
+                values['filtered'].drop(col, axis=1, inplace=True)
+
+        values['filtered'].to_csv(fp, mode='a', index=False, sep='\t')
+
+        with open(fp, 'a') as f:
+            for comment in values['comments_end']:
+                f.write(comment)
+
+    return filtered_annotations

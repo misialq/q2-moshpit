@@ -1643,10 +1643,12 @@ plugin.methods.register_function(
         ('annotation_frequency', FeatureTable[Frequency])
     ],
     input_descriptions={
-        "ortholog_annotations": "Ortholog annotations."
+        "ortholog_annotations": "Ortholog annotations.",
     },
     parameter_descriptions={
-        "annotation": "Annotation to extract."
+        "annotation": "Annotation to extract.",
+        "max_evalue": "Maximum allowed E-value.",
+        "min_score": "Minimum allowed score."
     },
     output_descriptions={
         'annotation_frequency': 'Feature table with frequency of '
@@ -1813,15 +1815,45 @@ plugin.visualizers.register_function(
         "log2_fold_change_threshold": Float,
     },
     input_descriptions={
-        "differentials": "Table.",
+        "differentials": "ANCOM-BC differentials.",
     },
     parameter_descriptions={
         "significance_threshold": "Significance threshold. Applies to the q-value.",
-        "log2_fold_change_threshold": "Log2 fold change threshold.",
+        "log2_fold_change_threshold": "Log2 absolute fold change threshold.",
     },
     name="Visualize KEGG pathways.",
-    description=".",
+    description="This action uses the iPATH3 pathway mapping tool to visualize"
+                "the terms enriched and/or depleted according to the ANCOM-BC"
+                "analysis.",
     citations=[],
+)
+
+plugin.methods.register_function(
+    function=q2_annotate.eggnog.annotation.filter_annotations,
+    inputs={"ortholog_annotations": GenomeData[NOG], },
+    parameters={
+        "query": Str,
+        "max_evalue": Float % Range(0, None),
+        "min_score": Float % Range(0, None),
+    },
+    outputs=[
+        ('filtered_annotations', GenomeData[NOG])
+    ],
+    input_descriptions={
+        "ortholog_annotations": "Ortholog annotations."
+    },
+    parameter_descriptions={
+        "query": "Query to filter annotations by.",
+        "max_evalue": "Maximum allowed E-value.",
+        "min_score": "Minimum allowed score."
+    },
+    output_descriptions={
+        'filtered_annotations': 'Filtered annotations.',
+    },
+    name='Filter EggNOG annotations.',
+    description='This method filters EggNOG annotation tables according to the '
+                'provided query, significance threshold',
+    citations=[]
 )
 
 plugin.register_semantic_types(BUSCOResults, BuscoDB)

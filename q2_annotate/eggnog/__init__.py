@@ -9,7 +9,9 @@ from .orthologs import (
     search_orthologs_diamond, _eggnog_diamond_search, search_orthologs_hmmer,
     _eggnog_hmmer_search, _eggnog_feature_table,
 )
-from .annotation import map_eggnog, _eggnog_annotate, extract_annotations
+from .annotation import (
+    map_eggnog, _eggnog_annotate, extract_annotations, filter_annotations
+)
 from .dbs import (
     fetch_eggnog_db, fetch_diamond_db, build_custom_diamond_db,
     fetch_eggnog_proteins, build_eggnog_diamond_db, fetch_ncbi_taxonomy,
@@ -23,5 +25,5 @@ __all__ = [
     'build_custom_diamond_db', 'fetch_eggnog_proteins',
     'build_eggnog_diamond_db', 'fetch_ncbi_taxonomy', '_eggnog_annotate',
     'fetch_eggnog_hmmer_db', 'search_orthologs_hmmer', '_eggnog_hmmer_search',
-    'extract_annotations', 'map_pathways'
+    'extract_annotations', 'map_pathways', 'filter_annotations'
 ]
